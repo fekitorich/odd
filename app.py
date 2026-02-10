@@ -1,28 +1,30 @@
-import streamlit as st
-import pandas as pd
+from __future__ import annotations
+import os
+import sys
+from pathlib import Path
 
-# Configurações simples direto no código
-st.set_page_config(page_title="Leitor de Odds", layout="wide")
+# FORÇA O PYTHON A VER OS ARQUIVOS NA RAIZ (MAIN)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-st.title("📊 Leitor de Odds Online")
-st.write("Se você está vendo isso, o servidor finalmente funcionou!")
+from flask import Flask, render_template, jsonify, request
+# Se o config.py está na raiz, este import agora VAI funcionar
+try:
+    import config
+except ImportError:
+    # Caso ele ainda engasgue, criamos um fallback
+    config = None
 
-# Simulação das suas constantes do config.py
-REGION_CONFIG = {
-    "us": "United States",
-    "eu": "Europe",
-    "uk": "United Kingdom"
-}
+app = Flask(__name__, 
+            template_folder="templates", 
+            static_folder="static")
 
-st.sidebar.header("Configurações")
-regiao = st.sidebar.selectbox("Escolha a Região", list(REGION_CONFIG.values()))
+@app.route("/")
+def index():
+    # Isso vai carregar o seu index.html azul bonito
+    return render_template("index.html")
 
-st.success(f"Monitorando odds para: {regiao}")
-
-# Espaço para os dados
-data = {
-    'Bookmaker': ['Pinnacle', 'Betfair', 'Matchbook'],
-    'Odd': [1.95, 2.02, 1.98]
-}
-df = pd.DataFrame(data)
-st.table(df)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
