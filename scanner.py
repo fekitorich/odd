@@ -58,3 +58,26 @@ def run_scan(api_key, sports, regions, commission, bankroll):
                     # Calcula o lucro/prejuízo REAL
                     imp_prob = (1/best_h) + (1/best_a)
                     roi = (1/imp_prob) - 1
+                    edge = round(roi * 100, 2)
+                    
+                    # MOSTRA TUDO: Até se der prejuízo de -5% (Edge > -5)
+                    # Isso garante que a tabela vai encher
+                    if edge > -10.0: 
+                        opportunities.append({
+                            "timestamp": dt.datetime.now().strftime("%H:%M"),
+                            "event": f"{event['home_team']} vs {event['away_team']}",
+                            "sport": sport,
+                            "market": "Moneyline",
+                            "soft_book": book_h, "soft_odd": best_h,
+                            "sharp_book": book_a, "sharp_odd": best_a,
+                            "edge": edge, # Vai mostrar negativo se não for arb
+                            "stake": 0
+                        })
+
+        except Exception as e:
+            print(f"Erro: {e}")
+            continue
+
+    # Ordena do melhor para o pior
+    opportunities.sort(key=lambda x: x['edge'], reverse=True)
+    return opportunities
