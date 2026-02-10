@@ -1,13 +1,6 @@
-import sys
 import os
-from flask import Flask, render_template_string, request
-from dotenv import load_dotenv
-
-# Carrega variáveis de ambiente (.env ou Railway Variables)
-load_dotenv()
-
-# Importa seu scanner original
-import scanner 
+import requests
+from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
@@ -16,112 +9,96 @@ HTML = """
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner Automático</title>
+    <title>DIAGNÓSTICO DA API</title>
     <style>
-        body { background: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .status { padding: 15px; background: #333; margin-bottom: 20px; border-left: 5px solid #00e676; }
-        button { background: #00e676; color: black; padding: 15px 30px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; }
-        button:hover { background: #00c853; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #333; }
-        th, td { padding: 12px; border: 1px solid #444; text-align: left; }
-        th { background: #1f1f1f; color: #00e676; }
-        tr:nth-child(even) { background: #1a1a1a; }
+        body { background: #000; color: #fff; font-family: monospace; padding: 20px; text-align: center; }
+        .box { border: 2px solid #fff; padding: 20px; margin: 20px auto; max-width: 600px; border-radius: 10px; }
+        h1 { color: yellow; }
+        .big-number { font-size: 48px; font-weight: bold; }
+        .red { color: #ff5252; border-color: #ff5252; }
+        .green { color: #00e676; border-color: #00e676; }
+        button { font-size: 20px; padding: 15px 30px; cursor: pointer; background: yellow; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Scanner de Arbitragem</h1>
-        
-        <div class="status">
-            Status da Chave: 
-            {% if has_key %} 
-                <strong style="color: #00e676">DETECTADA ({{ key_source }})</strong>
-            {% else %}
-                <strong style="color: #ff5252">NÃO ENCONTRADA</strong> <br>
-                <small>Configure ODDS_API_KEY nas variáveis do Railway.</small>
-            {% endif %}
+    <h1>🕵️ DIAGNÓSTICO DE SAÚDE DA API</h1>
+    
+    <form method="POST" action="/check">
+        <button type="submit">CHECAR MINHA CONTA AGORA</button>
+    </form>
+
+    {% if checked %}
+        <div class="box {{ 'green' if success else 'red' }}">
+            <h2>Status da API Key:</h2>
+            <p style="font-size: 24px;">{{ status_msg }}</p>
+            
+            <hr style="border-color: #333;">
+            
+            <p>Requisições Restantes:</p>
+            <div class="big-number">{{ remaining }}</div>
+            
+            <p>Requisições Usadas:</p>
+            <div class="big-number">{{ used }}</div>
         </div>
 
-        <form method="POST" action="/scan">
-            <button type="submit">RODAR SCANNER AGORA</button>
-        </form>
-
-        {% if searched %}
-            <h2>Resultados</h2>
-            {% if results %}
-                <table>
-                    <thead>
-                        <tr>
-                            {% for key in results[0].keys() %}
-                            <th>{{ key }}</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in results %}
-                        <tr>
-                            {% for cell in row.values() %}
-                            <td>{{ cell }}</td>
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>Scanner rodou mas não retornou oportunidades no momento.</p>
-            {% endif %}
-        {% endif %}
-
-        {% if error %}
-            <div style="color: #ff5252; margin-top: 20px;">
-                <h3>Erro:</h3>
-                <pre>{{ error }}</pre>
+        {% if raw_error %}
+            <div style="color: red; text-align: left; background: #220000; padding: 10px;">
+                <strong>RESPOSTA BRUTA DA API (ERRO):</strong><br>
+                {{ raw_error }}
             </div>
         {% endif %}
-    </div>
+    {% endif %}
 </body>
 </html>
 """
 
 @app.route("/", methods=["GET"])
 def index():
-    # Verifica se a chave existe no ambiente
-    api_key = os.environ.get("ODDS_API_KEY") or os.environ.get("API_KEY")
-    return render_template_string(HTML, has_key=(api_key is not None), key_source="Ambiente/.env")
+    return render_template_string(HTML)
 
-@app.route("/scan", methods=["POST"])
-def scan():
-    # 1. Tenta pegar a chave do ambiente
+@app.route("/check", methods=["POST"])
+def check():
     api_key = os.environ.get("ODDS_API_KEY") or os.environ.get("API_KEY")
     
     if not api_key:
-        return render_template_string(HTML, error="ERRO: API Key não encontrada nas variáveis de ambiente.")
+        return render_template_string(HTML, checked=True, success=False, status_msg="ERRO: Nenhuma API KEY encontrada no Railway Variables.", remaining="---", used="---")
 
-    # Configurações fixas ou pegas do ambiente também
-    sports = ['basketball_nba', 'americanfootball_nfl'] # Pode adicionar mais
-    regions = ['us', 'eu', 'uk', 'au'] # Pega tudo para garantir
-    commission = 0.05
-    bankroll = 1000
-
-    results = []
-    error_msg = None
+    # Faz uma requisição leve para testar a chave
+    # Usamos 'upcoming' para qualquer esporte só pra pegar os headers
+    url = f"https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
+    params = {
+        "apiKey": api_key,
+        "regions": "us",
+        "markets": "h2h",
+        "oddsFormat": "decimal"
+    }
 
     try:
-        # 2. Chama o scanner original
-        # Passamos a API Key direto para garantir que ele use a certa
-        if hasattr(scanner, 'run_scan'):
-            results = scanner.run_scan(api_key, sports, regions, commission, bankroll)
-        elif hasattr(scanner, 'main'):
-            # Se for main(), torcemos para ele ler do os.environ internamente
-            results = scanner.main()
+        response = requests.get(url, params=params)
+        
+        # A TheOddsAPI manda essas informações no Cabeçalho (Headers) da resposta
+        remaining = response.headers.get("x-requests-remaining", "Desconhecido")
+        used = response.headers.get("x-requests-used", "Desconhecido")
+        
+        if response.status_code == 200:
+            return render_template_string(HTML, checked=True, success=True, 
+                                          status_msg="✅ CHAVE ATIVA E FUNCIONANDO", 
+                                          remaining=remaining, used=used)
+        elif response.status_code == 401:
+            return render_template_string(HTML, checked=True, success=False, 
+                                          status_msg="❌ CHAVE INVÁLIDA OU EXPIRADA", 
+                                          remaining="0", used=used, raw_error=response.text)
+        elif response.status_code == 422 or "quota" in response.text.lower():
+             return render_template_string(HTML, checked=True, success=False, 
+                                          status_msg="💀 QUOTA EXCEDIDA (Acabou o limite)", 
+                                          remaining="0", used=used, raw_error=response.text)
         else:
-            error_msg = "Função 'run_scan' não encontrada no scanner.py."
+            return render_template_string(HTML, checked=True, success=False, 
+                                          status_msg=f"⚠️ ERRO DE CONEXÃO: {response.status_code}", 
+                                          remaining=remaining, used=used, raw_error=response.text)
 
     except Exception as e:
-        error_msg = f"Erro na execução: {str(e)}"
-
-    return render_template_string(HTML, has_key=True, searched=True, results=results, error=error_msg)
+        return render_template_string(HTML, checked=True, success=False, status_msg="ERRO INTERNO NO PYTHON", remaining="---", used="---", raw_error=str(e))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
