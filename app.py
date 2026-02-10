@@ -1,173 +1,106 @@
-from __future__ import annotations
 import os
 import sys
-from flask import Flask, render_template, request, render_template_string
+from flask import Flask, render_template_string, request
 
-# --- TENTA IMPORTAR O SCANNER REAL ---
-# Se o scanner.py estiver na pasta, ele usa. Se não, usa um modo de teste para não travar.
+# Tenta importar o scanner original e suas configurações
 try:
-    from scanner import run_scan
-    SCANNER_AVAILABLE = True
-except ImportError:
-    SCANNER_AVAILABLE = False
-    print("AVISO: scanner.py não encontrado. Usando modo de simulação.")
+    import config  # Se o original tem config.py, isso garante que ele seja lido
+    import scanner # O arquivo original
+except ImportError as e:
+    print(f"ERRO CRÍTICO: Faltam arquivos originais. {e}")
 
-# --- CONFIGURAÇÕES VISUAIS (RESULTADOS) ---
-# Esse HTML fica aqui dentro para você não precisar criar outro arquivo e arriscar erro 500
-RESULTS_HTML = """
+app = Flask(__name__)
+
+# HTML Básico (Apenas para exibir o resultado do scanner original)
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados do Scan</title>
+    <title>Scanner Original</title>
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: white; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        .btn-back { background: #3b82f6; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block; margin-bottom: 20px; font-weight: bold; }
-        .btn-back:hover { background: #2563eb; }
-        
-        /* Tabela de Resultados */
-        .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1e293b; border-radius: 8px; overflow: hidden; }
-        th { background: #334155; color: #94a3b8; text-align: left; padding: 15px; text-transform: uppercase; font-size: 12px; }
-        td { padding: 15px; border-bottom: 1px solid #334155; font-size: 14px; }
-        tr:hover { background: #2d3b4e; }
-        
-        .tag-edge { background: #064e3b; color: #34d399; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .tag-arb { background: #4c1d95; color: #a78bfa; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .book-soft { color: #60a5fa; font-weight: bold; }
-        .book-sharp { color: #f472b6; }
+        body { background: #111; color: #eee; font-family: sans-serif; padding: 20px; }
+        button { background: #007bff; color: white; padding: 15px 30px; border: none; font-size: 18px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #222; padding: 15px; overflow-x: auto; border: 1px solid #444; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
+        th { background: #333; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <a href="/" class="btn-back">← Voltar para o Scanner</a>
-        <h1>Oportunidades Encontradas</h1>
-        
-        {% if not scanner_active %}
-            <div style="background: #7f1d1d; color: #fca5a5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                ⚠️ <strong>Aviso:</strong> O arquivo 'scanner.py' não foi encontrado ou deu erro. Mostrando dados de exemplo.
-            </div>
-        {% endif %}
-
-        {% if opportunities %}
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Evento</th>
-                            <th>Mercado</th>
-                            <th>Aposta (Soft)</th>
-                            <th>Aposta (Sharp)</th>
-                            <th>Edge / ROI</th>
-                            <th>Kelly Stake</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for op in opportunities %}
-                        <tr>
-                            <td>{{ op.event }}<br><small style="color: #64748b">{{ op.sport }}</small></td>
-                            <td>{{ op.market }}</td>
-                            <td>
-                                <span class="book-soft">{{ op.soft_book }}</span><br>
-                                Odd: {{ op.soft_odd }}
-                            </td>
-                            <td>
-                                <span class="book-sharp">{{ op.sharp_book }}</span><br>
-                                Odd: {{ op.sharp_odd }}
-                            </td>
-                            <td><span class="tag-edge">{{ op.edge }}%</span></td>
-                            <td>R$ {{ op.stake }}</td>
-                        </tr>
+    <h1>Scanner de Arbitragem (Original)</h1>
+    <form method="POST" action="/scan">
+        <label>API Key (Opcional se já estiver no Config):</label><br>
+        <input type="text" name="apiKey" style="width: 300px; padding: 10px; margin-bottom: 10px;" placeholder="Sua Key aqui...">
+        <br>
+        <button type="submit">RODAR SCANNER AGORA</button>
+    </form>
+    
+    {% if result %}
+        <h2>Resultados:</h2>
+        {% if result is iterable and result is not string %}
+            <table>
+                <thead>
+                    <tr>
+                        {% for key in result[0].keys() %}
+                        <th>{{ key }}</th>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in result %}
+                    <tr>
+                        {% for value in item.values() %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         {% else %}
-            <div style="text-align: center; padding: 50px; color: #94a3b8;">
-                Nenhuma oportunidade encontrada com os filtros atuais.
-            </div>
+            <pre>{{ result }}</pre>
         {% endif %}
-    </div>
+    {% endif %}
+    
+    {% if error %}
+        <div style="color: red; margin-top: 20px;">
+            <h3>Erro:</h3>
+            <pre>{{ error }}</pre>
+        </div>
+    {% endif %}
 </body>
 </html>
 """
 
-# Configuração para rodar na raiz
-basedir = os.path.abspath(os.path.dirname(__file__))
-app = Flask(__name__, template_folder=basedir, static_folder=basedir)
-
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
-    # Carrega seu index.html (o que você criou no passo anterior)
-    try:
-        return render_template("index.html", has_env_key=True)
-    except Exception:
-        return "ERRO: O arquivo index.html não foi encontrado na raiz."
+    return render_template_string(HTML_TEMPLATE)
 
 @app.route("/scan", methods=["POST"])
-def scan():
-    # 1. Coleta os dados do Formulário HTML
-    api_key = os.environ.get("ODDS_API_KEY") or request.form.get("apiKey")
-    bankroll = float(request.form.get("bankroll", 1000))
-    sports = request.form.getlist("sports") # Pega lista de checkboxes
-    regions = request.form.getlist("regions")
-    commission = float(request.form.get("commission", 5)) / 100.0
-    
-    opportunities = []
+def scan_route():
+    api_key = request.form.get("apiKey")
+    # Se o usuário der API Key, tenta injetar no config
+    if api_key and hasattr(config, 'API_KEY'):
+        config.API_KEY = api_key
 
-    # 2. Executa o Scan (Real ou Simulado)
-    if SCANNER_AVAILABLE:
-        try:
-            # Tenta rodar a função real do seu scanner.py
-            # Adaptamos os parâmetros para o formato que o scanner.py geralmente espera
-            raw_results = run_scan(
-                api_key=api_key,
-                sports=sports,
-                regions=regions,
-                commission=commission,
-                bankroll=bankroll
-            )
-            # Se o run_scan retornar JSON/Dict, processamos aqui. 
-            # Se ele já retornar lista, ótimo. Assumindo que retorna um Dict com "data".
-            if isinstance(raw_results, dict):
-                opportunities = raw_results.get("data", [])
-            else:
-                opportunities = raw_results
-                
-        except Exception as e:
-            print(f"Erro ao rodar scanner: {e}")
-            # Em caso de erro, lista vazia ou simulação
-            pass
-    
-    # 3. SE NÃO TIVER DADOS (ou scanner falhar), cria dados falsos para você ver a tela funcionando
-    if not opportunities and not SCANNER_AVAILABLE:
-        opportunities = [
-            {
-                "event": "Simulação: Lakers vs Warriors",
-                "sport": "Basketball",
-                "market": "Moneyline",
-                "soft_book": "Bet365", "soft_odd": 2.10,
-                "sharp_book": "Pinnacle", "sharp_odd": 1.90,
-                "edge": 5.2,
-                "stake": round(bankroll * 0.02, 2)
-            },
-            {
-                "event": "Simulação: Nadal vs Federer",
-                "sport": "Tennis",
-                "market": "Winner",
-                "soft_book": "DraftKings", "soft_odd": 1.95,
-                "sharp_book": "Betfair", "sharp_odd": 1.85,
-                "edge": 2.1,
-                "stake": round(bankroll * 0.01, 2)
-            }
-        ]
+    try:
+        # TENTA RODAR A FUNÇÃO DO ARQUIVO ORIGINAL
+        # Verifica qual nome de função o original usa
+        if hasattr(scanner, 'run_scan'):
+            # Tenta passar argumentos padrão
+            data = scanner.run_scan(api_key, [], [], 5, 1000)
+        elif hasattr(scanner, 'main'):
+            data = scanner.main()
+        elif hasattr(scanner, 'scan'):
+            data = scanner.scan()
+        else:
+            return render_template_string(HTML_TEMPLATE, error="Não encontrei a função principal no scanner.py original.")
+            
+        return render_template_string(HTML_TEMPLATE, result=data)
 
-    # 4. Renderiza a tabela bonita
-    return render_template_string(RESULTS_HTML, opportunities=opportunities, scanner_active=SCANNER_AVAILABLE)
+    except Exception as e:
+        return render_template_string(HTML_TEMPLATE, error=f"O código original quebrou com erro: {str(e)}")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
