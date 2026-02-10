@@ -1,14 +1,9 @@
 import sys
-import io
 import os
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, request
 
-# Tenta importar o scanner original
-try:
-    import scanner
-except ImportError as e:
-    scanner = None
-    import_error = str(e)
+# Importa o scanner original (que você já subiu)
+import scanner
 
 app = Flask(__name__)
 
@@ -17,112 +12,106 @@ HTML = """
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner: Forçar Execução</title>
+    <title>Scanner Original - Interface</title>
     <style>
-        body { background: #111; color: #ddd; font-family: sans-serif; padding: 20px; }
-        .box { background: #222; padding: 15px; border: 1px solid #444; margin-top: 20px; white-space: pre-wrap; }
-        button { background: #007bff; color: white; padding: 15px; border: none; font-size: 18px; cursor: pointer; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #555; padding: 8px; text-align: left; }
-        th { color: #00e676; }
+        body { background: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #333; border: 1px solid #555; color: white; }
+        button { background: #00e676; color: black; padding: 15px; width: 100%; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #00c853; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #333; }
+        th, td { padding: 10px; border: 1px solid #444; text-align: left; }
+        th { background: #1f1f1f; color: #00e676; }
+        tr:nth-child(even) { background: #1a1a1a; }
+        .error { color: #ff5252; background: rgba(255, 82, 82, 0.1); padding: 10px; }
     </style>
 </head>
 <body>
-    <h1>Scanner Original</h1>
-    <p>Status do arquivo scanner.py: 
-       {% if scanner_ok %} <span style="color: #00e676">CARREGADO</span> 
-       {% else %} <span style="color: red">ERRO: {{ import_error }}</span> {% endif %}
-    </p>
+    <div class="container">
+        <h1>Scanner de Arbitragem (Original)</h1>
+        
+        <form method="POST" action="/scan">
+            <label>Sua API Key (TheOddsAPI):</label>
+            <input type="text" name="apiKey" placeholder="Cole a chave aqui..." required>
+            
+            <label>Esportes (Separados por vírgula):</label>
+            <input type="text" name="sports" value="basketball_nba" placeholder="Ex: basketball_nba,americanfootball_nfl">
+            
+            <button type="submit">RODAR SCANNER</button>
+        </form>
 
-    <form method="POST" action="/run">
-        <button type="submit">FORÇAR EXECUÇÃO (Scan)</button>
-    </form>
+        {% if searched %}
+            <h2>Resultados</h2>
+            {% if results %}
+                <table>
+                    <thead>
+                        <tr>
+                            {% for key in results[0].keys() %}
+                            <th>{{ key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in results %}
+                        <tr>
+                            {% for cell in row.values() %}
+                            <td>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>O scanner rodou com sucesso, mas não encontrou oportunidades com os filtros atuais.</p>
+            {% endif %}
+        {% endif %}
 
-    {% if output %}
-        <h2>Resultado (Texto):</h2>
-        <div class="box" style="border-color: #00e676;">{{ output }}</div>
-    {% endif %}
-
-    {% if data_list %}
-        <h2>Resultado (Tabela de Dados):</h2>
-        <table>
-            <thead>
-                <tr>
-                    {% for key in data_list[0].keys() %}
-                    <th>{{ key }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in data_list %}
-                <tr>
-                    {% for val in item.values() %}
-                    <td>{{ val }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endif %}
-
-    {% if error %}
-        <h2 style="color: red">Erro:</h2>
-        <div class="box" style="border-color: red;">{{ error }}</div>
-    {% endif %}
+        {% if error %}
+            <div class="error">
+                <strong>Erro:</strong> {{ error }}
+            </div>
+        {% endif %}
+    </div>
 </body>
 </html>
 """
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template_string(HTML, scanner_ok=(scanner is not None), import_error=locals().get('import_error', ''))
+    return render_template_string(HTML)
 
-@app.route("/run", methods=["POST"])
-def run_scan():
-    if not scanner:
-        return render_template_string(HTML, error="O arquivo scanner.py não pôde ser importado.")
-
-    # Captura prints (caso o scanner apenas imprima na tela)
-    capture = io.StringIO()
-    sys.stdout = capture
+@app.route("/scan", methods=["POST"])
+def scan():
+    # 1. Pega os dados do formulário
+    api_key = request.form.get("apiKey")
+    sports_input = request.form.get("sports")
     
-    result_data = None
-    execution_error = None
+    # Transforma 'basketball_nba, soccer_epl' em lista ['basketball_nba', 'soccer_epl']
+    sports_list = [s.strip() for s in sports_input.split(',')] if sports_input else ['basketball_nba']
+    
+    # 2. Configurações padrão (já que não temos inputs pra tudo)
+    regions = ['us', 'eu', 'uk'] 
+    commission = 0.05
+    bankroll = 1000
+
+    results = []
+    error_msg = None
 
     try:
-        # TENTA ACHAR A FUNÇÃO CERTA E RODAR
-        # Verifica as funções mais comuns usadas em scripts
-        if hasattr(scanner, 'main'):
-            result_data = scanner.main()
-        elif hasattr(scanner, 'run_scan'):
-            # Tenta rodar sem argumentos (pegando do config)
-            try:
-                result_data = scanner.run_scan()
-            except TypeError:
-                # Se pedir argumentos, tenta passar listas vazias
-                result_data = scanner.run_scan(None, [], [], None, 1000)
-        elif hasattr(scanner, 'scan'):
-            result_data = scanner.scan()
+        # 3. CHAMA A FUNÇÃO DO SCANNER ORIGINAL PASSANDO OS DADOS
+        # Isso garante que a API Key chegue lá dentro
+        if hasattr(scanner, 'run_scan'):
+            results = scanner.run_scan(api_key, sports_list, regions, commission, bankroll)
+        elif hasattr(scanner, 'main'):
+            # Se for main(), ele pode não aceitar argumentos, aí dependemos do config.py
+            results = scanner.main()
         else:
-            execution_error = "Não achei uma função conhecida (main, run_scan, scan) no arquivo original."
-            
+            error_msg = "Não encontrei a função 'run_scan' no seu arquivo scanner.py."
+
     except Exception as e:
-        execution_error = f"Ocorreu um erro ao rodar a função interna: {str(e)}"
-    
-    sys.stdout = sys.__stdout__ # Devolve o print pro lugar certo
-    printed_output = capture.getvalue()
+        error_msg = f"O scanner original deu erro: {str(e)}"
 
-    # Se o resultado for uma lista (dados), passamos para a tabela
-    is_list = isinstance(result_data, list) and len(result_data) > 0
-    
-    if not printed_output and not is_list and not execution_error:
-        printed_output = "A função rodou mas não retornou dados nem imprimiu texto. O scanner pode não ter encontrado oportunidades hoje."
-
-    return render_template_string(HTML, 
-                                  scanner_ok=True, 
-                                  output=printed_output, 
-                                  data_list=result_data if is_list else None, 
-                                  error=execution_error)
+    return render_template_string(HTML, searched=True, results=results, error=error_msg)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
