@@ -1,73 +1,43 @@
-import os
 import sys
+import io
+import os
 from flask import Flask, render_template_string, request
 
-# Tenta importar o scanner original e suas configurações
-try:
-    import config  # Se o original tem config.py, isso garante que ele seja lido
-    import scanner # O arquivo original
-except ImportError as e:
-    print(f"ERRO CRÍTICO: Faltam arquivos originais. {e}")
+# Importa o seu scanner original
+import scanner
 
 app = Flask(__name__)
 
-# HTML Básico (Apenas para exibir o resultado do scanner original)
-HTML_TEMPLATE = """
+HTML = """
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner Original</title>
+    <title>Scanner Original (Output Real)</title>
     <style>
-        body { background: #111; color: #eee; font-family: sans-serif; padding: 20px; }
-        button { background: #007bff; color: white; padding: 15px 30px; border: none; font-size: 18px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        pre { background: #222; padding: 15px; overflow-x: auto; border: 1px solid #444; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
-        th { background: #333; }
+        body { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 20px; }
+        .console { background: #161b22; padding: 20px; border: 1px solid #30363d; border-radius: 6px; white-space: pre-wrap; word-wrap: break-word; }
+        button { background: #238636; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #2ea043; }
+        h1 { border-bottom: 1px solid #30363d; padding-bottom: 10px; }
     </style>
 </head>
 <body>
-    <h1>Scanner de Arbitragem (Original)</h1>
-    <form method="POST" action="/scan">
-        <label>API Key (Opcional se já estiver no Config):</label><br>
-        <input type="text" name="apiKey" style="width: 300px; padding: 10px; margin-bottom: 10px;" placeholder="Sua Key aqui...">
-        <br>
-        <button type="submit">RODAR SCANNER AGORA</button>
-    </form>
+    <h1>Scanner Original</h1>
+    <p>Este botão roda o scanner usando EXATAMENTE o seu config.py</p>
     
-    {% if result %}
-        <h2>Resultados:</h2>
-        {% if result is iterable and result is not string %}
-            <table>
-                <thead>
-                    <tr>
-                        {% for key in result[0].keys() %}
-                        <th>{{ key }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in result %}
-                    <tr>
-                        {% for value in item.values() %}
-                        <td>{{ value }}</td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <pre>{{ result }}</pre>
-        {% endif %}
+    <form method="POST" action="/run">
+        <button type="submit">RODAR SCANNER</button>
+    </form>
+
+    {% if output %}
+        <h2>Resultado do Terminal:</h2>
+        <div class="console">{{ output }}</div>
     {% endif %}
     
     {% if error %}
-        <div style="color: red; margin-top: 20px;">
-            <h3>Erro:</h3>
-            <pre>{{ error }}</pre>
-        </div>
+        <h2 style="color: #ff7b72">Erro:</h2>
+        <div class="console" style="border-color: #ff7b72;">{{ error }}</div>
     {% endif %}
 </body>
 </html>
@@ -75,32 +45,48 @@ HTML_TEMPLATE = """
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(HTML)
 
-@app.route("/scan", methods=["POST"])
-def scan_route():
-    api_key = request.form.get("apiKey")
-    # Se o usuário der API Key, tenta injetar no config
-    if api_key and hasattr(config, 'API_KEY'):
-        config.API_KEY = api_key
+@app.route("/run", methods=["POST"])
+def run_scanner():
+    # 1. Cria um "bloco de notas" na memória para capturar o que o scanner imprimir
+    capture_output = io.StringIO()
+    original_stdout = sys.stdout # Guarda a saída original
+    sys.stdout = capture_output  # Desvia os prints para nossa memória
+
+    output_text = ""
+    error_text = None
 
     try:
-        # TENTA RODAR A FUNÇÃO DO ARQUIVO ORIGINAL
-        # Verifica qual nome de função o original usa
-        if hasattr(scanner, 'run_scan'):
-            # Tenta passar argumentos padrão
-            data = scanner.run_scan(api_key, [], [], 5, 1000)
-        elif hasattr(scanner, 'main'):
-            data = scanner.main()
-        elif hasattr(scanner, 'scan'):
-            data = scanner.scan()
+        # 2. Tenta rodar a função principal do scanner original
+        # A maioria dos scripts tem run_scan ou main
+        if hasattr(scanner, 'main'):
+            scanner.main()
+        elif hasattr(scanner, 'run_scan'):
+            # Chama SEM ARGUMENTOS para forçar o uso do config.py
+            try:
+                scanner.run_scan()
+            except TypeError:
+                # Se ele exigir argumentos, passamos None para ele tentar usar defaults
+                # Mas o ideal é que ele leia do config
+                scanner.run_scan(None, None, None, None, None)
         else:
-            return render_template_string(HTML_TEMPLATE, error="Não encontrei a função principal no scanner.py original.")
-            
-        return render_template_string(HTML_TEMPLATE, result=data)
+            print("AVISO: Não achei função 'main' ou 'run_scan'. Tentando executar o arquivo...")
+            # Último recurso: executa o script inteiro
+            exec(open("scanner.py").read())
 
     except Exception as e:
-        return render_template_string(HTML_TEMPLATE, error=f"O código original quebrou com erro: {str(e)}")
+        error_text = str(e)
+        import traceback
+        error_text += "\n" + traceback.format_exc()
+    
+    finally:
+        # 3. Restaura a saída original e pega o texto
+        sys.stdout = original_stdout
+        output_text = capture_output.getvalue()
+
+    return render_template_string(HTML, output=output_text, error=error_text)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
