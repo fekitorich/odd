@@ -1,8 +1,7 @@
-from __future__ import annotations
 import os
 from flask import Flask, render_template, jsonify
 
-# Configurações que o seu HTML original exige
+# --- DADOS DE CONFIGURAÇÃO (Para o HTML não quebrar) ---
 CONFIG_DATA = {
     "default_sports": [{"key": "americanfootball_nfl", "label": "NFL"}],
     "region_options": [{"key": "us", "label": "United States", "default": True}],
@@ -16,17 +15,25 @@ CONFIG_DATA = {
     "has_env_key": True
 }
 
-# Inicialização robusta
-app = Flask(__name__, template_folder="templates", static_folder="static")
+# --- CORREÇÃO DO ERRO ---
+# Pega o caminho exato onde este arquivo app.py está
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+# template_folder=basedir -> Diz pro Flask: "O HTML está AQUI COMIGO, não procure pasta templates"
+# static_folder=basedir   -> Diz pro Flask: "O CSS está AQUI COMIGO, não procure pasta static"
+app = Flask(__name__, template_folder=basedir, static_folder=basedir)
 
 @app.route("/")
 def index():
     try:
-        # Tenta carregar o seu design azul
+        # Tenta carregar o arquivo que está na raiz
         return render_template("index.html", **CONFIG_DATA)
     except Exception as e:
-        # Se o design azul falhar, ele mostra uma mensagem clara em vez do Erro 500
-        return f"Erro ao carregar o design: {e}. Verifique se a pasta 'templates' está na raiz do GitHub.", 500
+        return f"ERRO CRÍTICO: Não encontrei 'index.html' na pasta {basedir}. Erro: {e}", 500
+
+@app.route("/scan", methods=["POST"])
+def scan():
+    return jsonify({"success": True, "message": "Scan simulado com sucesso"})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
