@@ -1,4 +1,4 @@
-"""Configuration constants (copied from edge-scanner)."""
+"""Configuration constants (copied from edge-scanner).""" 
 
 from __future__ import annotations
 
