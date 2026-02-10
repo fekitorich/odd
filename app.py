@@ -1,40 +1,40 @@
-"""Configuration constants (copied from edge-scanner).""" 
-
 from __future__ import annotations
+import os
+import sys
+from pathlib import Path
+from flask import Flask, jsonify, render_template, request
 
+# --- CONFIGURAÇÕES INTEGRADAS (Para não dar erro de import) ---
 REGION_CONFIG = {
     "us": {"name": "United States", "default": True},
-    "us2": {"name": "United States (Additional)", "default": False},
-    "uk": {"name": "United Kingdom", "default": False},
     "eu": {"name": "Europe", "default": True},
-    "au": {"name": "Australia", "default": False},
+    "uk": {"name": "United Kingdom", "default": False},
 }
+DEFAULT_REGION_KEYS = [k for k, v in REGION_CONFIG.items() if v.get("default")]
+REGION_OPTIONS = [{"key": k, "label": v["name"], "default": v.get("default", False)} for k, v in REGION_CONFIG.items()]
+DEFAULT_COMMISSION = 0.05
+DEFAULT_BANKROLL = 1000.0
+DEFAULT_KELLY_FRACTION = 0.25
+MIN_EDGE_PERCENT = 1.0
+DEFAULT_SHARP_BOOK = "pinnacle"
+SHARP_BOOKS = [{"key": "pinnacle", "name": "Pinnacle"}]
+DEFAULT_SPORT_OPTIONS = [{"key": "americanfootball_nfl", "label": "NFL"}]
+KELLY_OPTIONS = [0.1, 0.25, 0.5, 1.0]
 
-DEFAULT_REGION_KEYS = [key for key, meta in REGION_CONFIG.items() if meta.get("default")]
+# --- INICIALIZAÇÃO ---
+app = Flask(__name__)
 
-REGION_OPTIONS = [
-    {"key": key, "label": meta["name"], "default": meta.get("default", False)}
-    for key, meta in REGION_CONFIG.items()
-]
+@app.route("/")
+def index():
+    return "Leitor de Odds Online - O servidor está funcionando!"
 
-EXCHANGE_BOOKMAKERS = {
-    "betfair_ex_eu": {"name": "Betfair"},
-    "betfair_ex_uk": {"name": "Betfair"},
-    "betfair_ex_au": {"name": "Betfair"},
-    "sportsbet_ex": {"name": "Sportsbet Exchange"},
-    "matchbook": {"name": "Matchbook"},
-}
+@app.route("/scan", methods=["POST"])
+def scan():
+    return jsonify({"success": True, "message": "Scanner pronto"})
 
-EXCHANGE_KEYS = set(EXCHANGE_BOOKMAKERS.keys())
-
-DEFAULT_COMMISSION = 0.05  # 5%
-
-# (truncated for brevity; copied constants required by scanner.py)
-
-MIN_MIDDLE_GAP = 1.5
-DEFAULT_MIDDLE_SORT = "ev"
-SHOW_POSITIVE_EV_ONLY = True
-
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 PROBABILITY_PER_INTEGER = {"default": 0.03}
 
 NFL_KEY_NUMBER_PROBABILITY = {3: 0.15}
