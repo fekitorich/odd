@@ -1,4 +1,5 @@
 flask
+pandas
 requests
 python-dotenv
 gunicorn
