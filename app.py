@@ -78,8 +78,6 @@ def markets_for_sport(sport_key: str) -> list[str]:
         return SOCCER_MARKETS
     return SOCCER_MARKETS.copy()
 	
-	from __future__ import annotations
-
 import os
 import sys
 from pathlib import Path
