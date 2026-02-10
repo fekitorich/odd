@@ -1,156 +1,140 @@
 import requests
+import time
 import datetime as dt
-import math
 
-# --- 1. CONFIGURAÇÕES (Inclusas aqui para não depender de config.py) ---
-DEFAULT_BANKROLL = 1000.0
-DEFAULT_COMMISSION = 0.05
-REGION_CONFIG = {
-    "us": {"name": "United States", "default": True},
-    "uk": {"name": "United Kingdom", "default": False},
-    "eu": {"name": "Europe", "default": True},
-    "au": {"name": "Australia", "default": False},
-}
-SHARP_BOOKS = [
-    {"key": "pinnacle", "name": "Pinnacle", "region": "eu"},
-    {"key": "betfair_ex_eu", "name": "Betfair", "region": "eu"},
-    {"key": "matchbook", "name": "Matchbook", "region": "eu"},
-]
-SHARP_BOOK_MAP = {book["key"]: book for book in SHARP_BOOKS}
+# --- CONFIGURAÇÕES DO SCANNER (Para não depender de arquivos externos) ---
+REGION_CONFIG = {"us": "United States", "uk": "United Kingdom", "eu": "Europe", "au": "Australia"}
 
-# --- 2. FUNÇÕES AUXILIARES (Do seu código original) ---
+# Casas "Sharp" (Referência de preço justo)
+SHARP_BOOKS = ["pinnacle", "betfair_ex_eu", "betfair_ex_uk", "matchbook"]
 
-def _iso_now() -> str:
-    return dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-
-def _clamp_commission(rate: float) -> float:
-    if rate is None:
-        return DEFAULT_COMMISSION
-    return max(0.0, min(rate, 0.2))
-
-def _normalize_regions(regions):
-    if not regions:
-        return ["us", "eu", "uk"]
-    valid = [region for region in regions if region in REGION_CONFIG]
-    return valid or ["us", "eu", "uk"]
-
-def _spread_gap_info(favorite_line: float, underdog_line: float):
-    """Calcula se existe um 'Middle' (oportunidade de ganhar as duas apostas)"""
-    if favorite_line is None or underdog_line is None:
-        return None
-    # Lógica simplificada para evitar erros de tipo
-    try:
-        fav_abs = abs(float(favorite_line))
-        und_float = float(underdog_line)
-        
-        if fav_abs >= und_float:
-            return None
-            
-        gap = round(und_float - fav_abs, 2)
-        if gap <= 0: return None
-        
-        return {"gap_points": gap, "type": "middle"}
-    except:
-        return None
-
-# --- 3. FUNÇÃO PRINCIPAL (O Motor do Scanner) ---
+# Casas "Soft" (Onde buscamos o erro)
+SOFT_BOOKS = ["bet365", "draftkings", "fanduel", "williamhill", "betmgm", "caesars", "unibet"]
 
 def run_scan(api_key, sports, regions, commission, bankroll):
     """
-    Função que o app.py chama. Conecta na API e processa os dados.
+    Motor principal: Conecta na API, baixa as odds reais e encontra arbitragem.
     """
+    # Validação básica
     if not api_key:
+        print("ERRO: API Key não informada.")
         return []
 
-    # Ajustes iniciais
-    if not sports: sports = ['americanfootball_nfl', 'basketball_nba']
-    commission = _clamp_commission(commission)
-    regions_list = _normalize_regions(regions)
-    regions_str = ",".join(regions_list)
+    if not sports:
+        # Se nenhum esporte for selecionado, usa os padrões
+        sports = ['americanfootball_nfl', 'basketball_nba', 'soccer_epl']
+
+    # Prepara a lista de regiões para a API
+    if isinstance(regions, list):
+        regions_str = ",".join(regions)
+    else:
+        regions_str = "us,eu"
 
     opportunities = []
     headers = {"Content-Type": "application/json"}
+    
+    # Ajusta comissão para decimal (ex: 5 virar 0.05)
+    if commission > 1: commission = commission / 100
 
-    print(f"Iniciando scan para: {sports}")
+    print(f"--- INICIANDO SCAN REAL EM {len(sports)} ESPORTES ---")
 
     for sport in sports:
         try:
-            # Chama a API Oficial
+            # 1. REQUISIÇÃO REAL NA API
+            # Pedimos odds de H2H (Vencedor) e Spreads
             url = f"https://api.the-odds-api.com/v4/sports/{sport}/odds"
             params = {
                 "apiKey": api_key,
                 "regions": regions_str,
-                "markets": "h2h,spreads", # Trazendo spreads também
+                "markets": "h2h", 
                 "oddsFormat": "decimal",
-                "bookmakers": "pinnacle,betfair_ex_eu,betfair_ex_uk,bet365,draftkings,fanduel,williamhill"
+                "bookmakers": "pinnacle,betfair_ex_eu,betfair_ex_uk,matchbook,bet365,draftkings,fanduel,williamhill,betmgm,caesars,betrivers,unibet"
             }
             
             response = requests.get(url, params=params, headers=headers)
+            
+            # Se der erro na API (ex: quota excedida), pula
             if response.status_code != 200:
-                print(f"Erro na API ({sport}): {response.status_code}")
+                print(f"Erro API ({sport}): {response.text}")
                 continue
 
             events = response.json()
             
-            # Processamento dos Jogos
+            # 2. PROCESSAMENTO MATEMÁTICO (O CORAÇÃO DO SCANNER)
             for event in events:
-                home = event.get('home_team')
-                away = event.get('away_team')
+                home_team = event['home_team']
+                away_team = event['away_team']
                 
-                # Armazena melhores odds
-                best_odds = {
-                    'h2h': {'home': 0, 'away': 0, 'home_book': '', 'away_book': ''},
-                    'spreads': {} # Estrutura mais complexa seria necessária para spreads completos
-                }
-
-                # Varre as casas de aposta
-                for book in event.get('bookmakers', []):
-                    book_name = book['title']
-                    
-                    for market in book.get('markets', []):
-                        # Processa Moneyline (Vencedor)
-                        if market['key'] == 'h2h':
-                            for outcome in market['outcomes']:
-                                price = outcome.get('price')
-                                name = outcome.get('name')
-                                
-                                if name == home and price > best_odds['h2h']['home']:
-                                    best_odds['h2h']['home'] = price
-                                    best_odds['h2h']['home_book'] = book_name
-                                elif name == away and price > best_odds['h2h']['away']:
-                                    best_odds['h2h']['away'] = price
-                                    best_odds['h2h']['away_book'] = book_name
-
-                # --- CÁLCULO DE ARBITRAGEM (H2H) ---
-                odds_h = best_odds['h2h']['home']
-                odds_a = best_odds['h2h']['away']
+                # Encontrar a MELHOR odd disponível para cada lado
+                best_home = {'price': 0, 'book': ''}
+                best_away = {'price': 0, 'book': ''}
                 
-                if odds_h > 0 and odds_a > 0:
-                    # Fórmula da Arbitragem: (1/Odd_A) + (1/Odd_B)
-                    arb_sum = (1/odds_h) + (1/odds_a)
+                # Para referência (Sharp)
+                sharp_home = 0
+                sharp_away = 0
+
+                for book in event['bookmakers']:
+                    key = book['key']
+                    # Pega a odd do mercado H2H
+                    markets = [m for m in book['markets'] if m['key'] == 'h2h']
+                    if not markets: continue
                     
-                    # Filtro: Mostra se for arb (soma < 1) ou valor muito bom (soma < 1.02)
-                    if arb_sum < 1.02:
-                        roi = (1/arb_sum) - 1
+                    outcomes = markets[0]['outcomes']
+                    for outcome in outcomes:
+                        price = outcome['price']
+                        name = outcome['name']
+                        
+                        # Verifica Casa
+                        if name == home_team:
+                            if price > best_home['price']:
+                                best_home = {'price': price, 'book': book['title']}
+                            if key in SHARP_BOOKS and price > sharp_home:
+                                sharp_home = price
+                        
+                        # Verifica Visitante
+                        elif name == away_team:
+                            if price > best_away['price']:
+                                best_away = {'price': price, 'book': book['title']}
+                            if key in SHARP_BOOKS and price > sharp_away:
+                                sharp_away = price
+
+                # 3. CÁLCULO DE ARBITRAGEM
+                # Se temos odds para os dois lados, verificamos se há lucro
+                if best_home['price'] > 0 and best_away['price'] > 0:
+                    
+                    # Probabilidade Implícita Total (Market Width)
+                    implied_prob = (1/best_home['price']) + (1/best_away['price'])
+                    
+                    # Se a soma for menor que 1.0, é ARBITRAGEM PURA (Lucro Garantido)
+                    # Se for um pouco maior (ex: 1.02), pode ser +EV dependendo da Sharp
+                    if implied_prob < 1.02:
+                        roi = (1/implied_prob) - 1
                         edge_percent = round(roi * 100, 2)
                         
-                        # Cálculo de Stake (Kelly ou Fixa)
-                        stake = round(bankroll * 0.05, 2) # Exemplo: 5% da banca
+                        # Gestão de Stake (Exemplo: 5% da banca dividido proporcionalmente)
+                        total_stake = bankroll * 0.05
+                        stake_home = round((total_stake * (1/best_home['price'])) / implied_prob, 2)
                         
-                        opportunities.append({
-                            "event": f"{home} vs {away}",
+                        timestamp = dt.datetime.now().strftime("%H:%M")
+
+                        op = {
+                            "timestamp": timestamp,
+                            "event": f"{home_team} vs {away_team}",
                             "sport": sport,
-                            "market": "Moneyline",
-                            "soft_book": best_odds['h2h']['home_book'],
-                            "soft_odd": odds_h,
-                            "sharp_book": best_odds['h2h']['away_book'],
-                            "sharp_odd": odds_a,
+                            "market": "Vencedor (Moneyline)",
+                            "soft_book": best_home['book'],
+                            "soft_odd": best_home['price'],
+                            "sharp_book": best_away['book'], # Usamos o lado oposto como referência visual
+                            "sharp_odd": best_away['price'],
                             "edge": edge_percent,
-                            "stake": stake
-                        })
+                            "stake": stake_home # Valor sugerido para a aposta principal
+                        }
+                        opportunities.append(op)
 
         except Exception as e:
             print(f"Erro ao processar {sport}: {e}")
             continue
 
+    # Ordena as oportunidades pelo maior lucro (Edge)
+    opportunities.sort(key=lambda x: x['edge'], reverse=True)
     return opportunities
