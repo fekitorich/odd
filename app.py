@@ -1,9 +1,13 @@
 import sys
 import os
 from flask import Flask, render_template_string, request
+from dotenv import load_dotenv
 
-# Importa o scanner original (que você já subiu)
-import scanner
+# Carrega variáveis de ambiente (.env ou Railway Variables)
+load_dotenv()
+
+# Importa seu scanner original
+import scanner 
 
 app = Flask(__name__)
 
@@ -12,32 +16,35 @@ HTML = """
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner Original - Interface</title>
+    <title>Scanner Automático</title>
     <style>
         body { background: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #333; border: 1px solid #555; color: white; }
-        button { background: #00e676; color: black; padding: 15px; width: 100%; border: none; font-weight: bold; cursor: pointer; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .status { padding: 15px; background: #333; margin-bottom: 20px; border-left: 5px solid #00e676; }
+        button { background: #00e676; color: black; padding: 15px 30px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; }
         button:hover { background: #00c853; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #333; }
-        th, td { padding: 10px; border: 1px solid #444; text-align: left; }
+        th, td { padding: 12px; border: 1px solid #444; text-align: left; }
         th { background: #1f1f1f; color: #00e676; }
         tr:nth-child(even) { background: #1a1a1a; }
-        .error { color: #ff5252; background: rgba(255, 82, 82, 0.1); padding: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Scanner de Arbitragem (Original)</h1>
+        <h1>Scanner de Arbitragem</h1>
         
+        <div class="status">
+            Status da Chave: 
+            {% if has_key %} 
+                <strong style="color: #00e676">DETECTADA ({{ key_source }})</strong>
+            {% else %}
+                <strong style="color: #ff5252">NÃO ENCONTRADA</strong> <br>
+                <small>Configure ODDS_API_KEY nas variáveis do Railway.</small>
+            {% endif %}
+        </div>
+
         <form method="POST" action="/scan">
-            <label>Sua API Key (TheOddsAPI):</label>
-            <input type="text" name="apiKey" placeholder="Cole a chave aqui..." required>
-            
-            <label>Esportes (Separados por vírgula):</label>
-            <input type="text" name="sports" value="basketball_nba" placeholder="Ex: basketball_nba,americanfootball_nfl">
-            
-            <button type="submit">RODAR SCANNER</button>
+            <button type="submit">RODAR SCANNER AGORA</button>
         </form>
 
         {% if searched %}
@@ -62,13 +69,14 @@ HTML = """
                     </tbody>
                 </table>
             {% else %}
-                <p>O scanner rodou com sucesso, mas não encontrou oportunidades com os filtros atuais.</p>
+                <p>Scanner rodou mas não retornou oportunidades no momento.</p>
             {% endif %}
         {% endif %}
 
         {% if error %}
-            <div class="error">
-                <strong>Erro:</strong> {{ error }}
+            <div style="color: #ff5252; margin-top: 20px;">
+                <h3>Erro:</h3>
+                <pre>{{ error }}</pre>
             </div>
         {% endif %}
     </div>
@@ -78,19 +86,21 @@ HTML = """
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template_string(HTML)
+    # Verifica se a chave existe no ambiente
+    api_key = os.environ.get("ODDS_API_KEY") or os.environ.get("API_KEY")
+    return render_template_string(HTML, has_key=(api_key is not None), key_source="Ambiente/.env")
 
 @app.route("/scan", methods=["POST"])
 def scan():
-    # 1. Pega os dados do formulário
-    api_key = request.form.get("apiKey")
-    sports_input = request.form.get("sports")
+    # 1. Tenta pegar a chave do ambiente
+    api_key = os.environ.get("ODDS_API_KEY") or os.environ.get("API_KEY")
     
-    # Transforma 'basketball_nba, soccer_epl' em lista ['basketball_nba', 'soccer_epl']
-    sports_list = [s.strip() for s in sports_input.split(',')] if sports_input else ['basketball_nba']
-    
-    # 2. Configurações padrão (já que não temos inputs pra tudo)
-    regions = ['us', 'eu', 'uk'] 
+    if not api_key:
+        return render_template_string(HTML, error="ERRO: API Key não encontrada nas variáveis de ambiente.")
+
+    # Configurações fixas ou pegas do ambiente também
+    sports = ['basketball_nba', 'americanfootball_nfl'] # Pode adicionar mais
+    regions = ['us', 'eu', 'uk', 'au'] # Pega tudo para garantir
     commission = 0.05
     bankroll = 1000
 
@@ -98,20 +108,20 @@ def scan():
     error_msg = None
 
     try:
-        # 3. CHAMA A FUNÇÃO DO SCANNER ORIGINAL PASSANDO OS DADOS
-        # Isso garante que a API Key chegue lá dentro
+        # 2. Chama o scanner original
+        # Passamos a API Key direto para garantir que ele use a certa
         if hasattr(scanner, 'run_scan'):
-            results = scanner.run_scan(api_key, sports_list, regions, commission, bankroll)
+            results = scanner.run_scan(api_key, sports, regions, commission, bankroll)
         elif hasattr(scanner, 'main'):
-            # Se for main(), ele pode não aceitar argumentos, aí dependemos do config.py
+            # Se for main(), torcemos para ele ler do os.environ internamente
             results = scanner.main()
         else:
-            error_msg = "Não encontrei a função 'run_scan' no seu arquivo scanner.py."
+            error_msg = "Função 'run_scan' não encontrada no scanner.py."
 
     except Exception as e:
-        error_msg = f"O scanner original deu erro: {str(e)}"
+        error_msg = f"Erro na execução: {str(e)}"
 
-    return render_template_string(HTML, searched=True, results=results, error=error_msg)
+    return render_template_string(HTML, has_key=True, searched=True, results=results, error=error_msg)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
