@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge Scanner</title>
+    <style>
+        /* ESTILO VISUAL (Baseado no seu print original) */
+        :root {
+            --bg-color: #0f172a;
+            --card-color: #1e293b;
+            --text-color: #e2e8f0;
+            --primary-blue: #3b82f6;
+            --primary-hover: #2563eb;
+            --border-color: #334155;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Cabeçalho */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 { margin: 0; font-size: 24px; color: white; }
+        .subtitle { color: #94a3b8; font-size: 14px; margin-top: 5px; }
+
+        /* Painel Principal */
+        .main-panel {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Grid do Formulário */
+        .grid-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* 3 Colunas iguais */
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #cbd5e1; }
+        
+        /* Inputs estilizados */
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        input:focus { border-color: var(--primary-blue); outline: none; }
+
+        /* Checkboxes Customizados */
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        input[type="checkbox"] {
+            accent-color: var(--primary-blue);
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Botão de Scan */
+        .scan-btn {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        
+        .scan-btn:hover { background-color: var(--primary-hover); }
+
+        /* Responsividade para celular */
+        @media (max-width: 768px) {
+            .grid-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Edge Scanner</h1>
+            <div class="subtitle">Arbitrage • Middles • +EV</div>
+        </div>
+        <div>
+            <span style="background:#334155; padding: 5px 10px; border-radius: 20px; font-size: 12px;">Decimal</span>
+        </div>
+    </header>
+
+    <form action="/scan" method="POST" class="main-panel">
+        <div class="grid-row">
+            <div>
+                <div class="form-group">
+                    <label>API KEY</label
