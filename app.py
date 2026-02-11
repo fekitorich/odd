@@ -4,7 +4,7 @@ from scanner import run_scan
 
 app = Flask(__name__)
 
-# Pega a chave do Railway
+# Chave de backup do servidor
 ENV_API_KEY = os.getenv("ODDS_API_KEY")
 
 @app.route("/")
@@ -13,14 +13,16 @@ def index():
 
 @app.route("/scan", methods=["POST"])
 def scan():
-    # Pega os dados do formulário
     data = request.get_json() or {}
     
-    # Chama o SEU scanner original exatamente como ele foi criado para ser chamado.
-    # Sem inventar moda, sem filtros extras.
+    # MUDANÇA CRÍTICA:
+    # 1. Tenta pegar a chave que você digitou no site.
+    # 2. Se você deixar em branco, tenta usar a do servidor.
+    final_key = data.get("apiKey") or ENV_API_KEY
+    
     try:
         result = run_scan(
-            api_key=ENV_API_KEY or data.get("apiKey"),
+            api_key=final_key,
             sports=data.get("sports"),
             regions=data.get("regions"),
             stake_amount=float(data.get("stake") or 100),
@@ -28,7 +30,6 @@ def scan():
         )
         return jsonify(result)
     except Exception as e:
-        # Se der erro, mostra no log do Railway para sabermos o que é
         print(f"Erro no Scanner: {e}")
         return jsonify({"error": str(e)}), 500
 
