@@ -2,9 +2,9 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Edge Scanner Global - Pro</title>
+    <title>Edge Scanner Global - Pro +EV</title>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #064e3b; --green-text: #34d399; --red: #7f1d1d; --red-text: #f87171; }
+        :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #064e3b; --green-text: #34d399; --red: #7f1d1d; }
         body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; margin: 0; }
         .container { max-width: 1400px; margin: 0 auto; }
         .main-panel { background: var(--panel); padding: 25px; border-radius: 12px; display: grid; grid-template-columns: 320px 1fr; gap: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.5); }
@@ -15,19 +15,17 @@
         .item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 5px; color: #cbd5e1; cursor: pointer; }
         .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
         .btn:hover { background: #2563eb; }
-        .tabs { display: flex; gap: 10px; margin-top: 20px; border-bottom: 1px solid #334155; }
-        .tab { padding: 10px 20px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; }
-        .tab.active { color: white; border-bottom: 2px solid var(--primary); font-weight: bold; }
-        .content { display: none; background: var(--panel); margin-top: 10px; border-radius: 8px; overflow: hidden; }
-        .content.active { display: block; }
+        
+        .results-box { background: var(--panel); margin-top: 20px; border-radius: 8px; overflow: hidden; }
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 15px; font-size: 11px; color: #94a3b8; text-transform: uppercase; background: rgba(0,0,0,0.2); }
-        td { padding: 15px; border-bottom: 1px solid #334155; font-size: 13px; vertical-align: top; }
-        .roi-badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; }
-        .roi-pos { background: rgba(6, 78, 59, 0.4); color: var(--green-text); border: 1px solid var(--green); }
-        .bet-box { background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px; border-left: 4px solid var(--primary); margin-bottom: 8px; }
-        .bookie { color: #94a3b8; font-size: 11px; }
-        .market-tag { font-size: 10px; background: #334155; padding: 2px 6px; border-radius: 4px; color: #3b82f6; font-weight: bold; margin-bottom: 6px; display: inline-block; }
+        td { padding: 18px 15px; border-bottom: 1px solid #334155; font-size: 13px; vertical-align: top; }
+        
+        .bet-card { background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 6px; border-left: 4px solid var(--primary); }
+        .bet-selection { color: white; font-size: 16px; font-weight: bold; display: block; margin-bottom: 4px; }
+        .bet-meta { color: #94a3b8; font-size: 12px; }
+        .odd-highlight { color: var(--green-text); font-weight: bold; font-size: 15px; }
+        .edge-badge { background: rgba(6, 78, 59, 0.6); color: var(--green-text); padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 14px; border: 1px solid var(--green); }
     </style>
 </head>
 <body>
@@ -36,20 +34,18 @@
             <div>
                 <label>API KEY</label>
                 <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958">
-                <label>STAKE TOTAL ($)</label>
-                <input type="number" name="stake" value="100">
-                <label>REGIONS</label>
+                <label>REGIONS (Sharps & Softs)</label>
                 <div style="font-size:12px; margin-bottom:15px; display: grid; gap: 8px;">
                     <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU (Pinnacle/Sharps)</label>
                     <label class="item"><input type="checkbox" name="regions" value="uk" checked> UK (Betfair/Decimais)</label>
                 </div>
-                <button type="submit" class="btn" id="btn">Scan Now</button>
+                <button type="submit" class="btn" id="btn">Scan +EV Now</button>
             </div>
             <div>
-                <label>LIGAS AMÉRICAS + US</label>
+                <label>LIGAS SELECIONADAS (NBA, NFL & AMÉRICAS)</label>
                 <div class="sports-grid">
                     <div>
-                        <div class="cat-title">Principais</div>
+                        <div class="cat-title">US Sports</div>
                         <label class="item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
                         <label class="item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
                         <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
@@ -68,33 +64,26 @@
             </div>
         </form>
 
-        <div id="results-area" style="margin-top:20px; display:none;">
-            <div class="tabs">
-                <div class="tab active" onclick="showTab('ev', this)">+EV (Valor)</div>
-                <div class="tab" onclick="showTab('arb', this)">Arbitrage (Lucro Certo)</div>
-            </div>
-            <div id="ev" class="content active">
-                <table><thead><tr><th>Evento / Liga</th><th>Aposta Sugerida</th><th>Edge</th></tr></thead><tbody id="tb-ev"></tbody></table>
-            </div>
-            <div id="arb" class="content">
-                <table><thead><tr><th>Evento / Liga</th><th>Cálculo</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
-            </div>
+        <div id="results-area" class="results-box" style="display:none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Evento / Liga</th>
+                        <th>Onde e o que Apostar</th>
+                        <th>Valor (+EV)</th>
+                    </tr>
+                </thead>
+                <tbody id="tb-ev"></tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        function showTab(id, el) {
-            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            el.classList.add('active');
-        }
-
         document.getElementById('form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn');
             const results = document.getElementById('results-area');
-            btn.innerText = 'Processando...';
+            btn.innerText = 'Calculando Valor Esperado...';
             btn.disabled = true;
 
             try {
@@ -103,7 +92,7 @@
                     apiKey: formData.get('apiKey'),
                     sports: [...formData.getAll('sports')],
                     regions: [...formData.getAll('regions')],
-                    stake: formData.get('stake')
+                    stake: 100
                 };
 
                 const res = await fetch('/scan', {
@@ -112,71 +101,57 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
+                
                 results.style.display = 'block';
-                renderTable('tb-ev', data.plus_ev?.opportunities);
-                renderTable('tb-arb', data.arbitrage?.opportunities);
+                renderEVTable(data.plus_ev?.opportunities);
+
             } catch (err) {
-                alert("Erro Fatal: " + err.message);
+                alert("Erro: " + err.message);
             } finally {
-                btn.innerText = 'Scan Now';
+                btn.innerText = 'Scan +EV Now';
                 btn.disabled = false;
             }
         });
 
-        function renderTable(tbodyId, list) {
-            const tbody = document.getElementById(tbodyId);
+        function renderEVTable(list) {
+            const tbody = document.getElementById('tb-ev');
             tbody.innerHTML = '';
+
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">Nenhuma oportunidade encontrada.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#64748b;">Nenhuma aposta com Valor Esperado (+EV) no momento.</td></tr>';
                 return;
             }
 
             list.forEach(item => {
-                const val = item.edge_percent || item.roi_percent || item.roi || 0;
-                let detailHtml = `<div class="market-tag">${item.market?.toUpperCase() || 'MARKET'}</div>`;
-                
-                const outcomes = item.outcomes || [];
-                
-                if (outcomes.length > 0) {
-                    detailHtml += outcomes.map(oc => {
-                        // DETECÇÃO DE PREÇO (Evita o Undefined)
-                        const odd = oc.price || oc.odds || oc.value || 'N/A';
-                        const bookie = oc.bookmaker || oc.bookie || 'Casa Desconhecida';
-                        
-                        // DETECÇÃO DE MERCADO (Over/Under/Handicap)
-                        const name = oc.name || oc.selection || 'Aposta';
-                        const line = oc.point || item.point || '';
-                        const fullSelection = `${name} ${line}`.trim();
+                // Identifica a aposta específica (Over, Under, Time, etc)
+                const betName = item.selection || item.name || 'Seleção';
+                const line = item.point ? ` ${item.point}` : '';
+                const fullBet = `${betName}${line}`;
 
-                        return `
-                            <div class="bet-box">
-                                <span style="color:white; font-weight:bold;">${fullSelection}</span><br>
-                                <span class="bookie">na <b>${bookie}</b> @ <b style="color:var(--green-text)">${odd}</b></span>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    // Fallback para objetos simples sem lista de outcomes
-                    const simpleOdd = item.price || item.odds || 'N/A';
-                    const simpleName = item.selection || item.name || 'Resultado';
-                    const simpleLine = item.point ? ' ' + item.point : '';
-
-                    detailHtml += `
-                        <div class="bet-box">
-                            <span style="color:white; font-weight:bold;">${simpleName}${simpleLine}</span><br>
-                            <span class="bookie">na <b>${item.bookmaker || 'Casa'}</b> @ <b style="color:var(--green-text)">${simpleOdd}</b></span>
-                        </div>
-                    `;
-                }
+                // Identifica a casa e a odd
+                const bookie = item.bookmaker || item.bookie || 'Casa de Aposta';
+                const odd = item.price || item.odds || 'N/A';
+                
+                // Pega a margem de lucro (+EV)
+                const edge = item.edge_percent || item.roi || 0;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td>
-                            <div style="font-weight:bold; color:white;">${item.sport || 'Esporte'}</div>
-                            <div style="color:#94a3b8; font-size:11px; margin-top:2px;">${item.event || 'Jogo'}</div>
+                        <td style="width: 300px;">
+                            <div style="font-weight:bold; color:white; font-size:14px;">${item.event || 'Jogo'}</div>
+                            <div style="color:#94a3b8; font-size:11px; margin-top:4px;">${item.sport?.toUpperCase() || 'LIGA'}</div>
                         </td>
-                        <td>${detailHtml}</td>
-                        <td><span class="roi-badge roi-pos">${parseFloat(val).toFixed(2)}%</span></td>
+                        <td>
+                            <div class="bet-card">
+                                <span class="bet-selection">${fullBet}</span>
+                                <span class="bet-meta">
+                                    Apostar na <b>${bookie}</b> <span class="odd-highlight">@ ${odd}</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td style="width: 150px; text-align: center;">
+                            <div class="edge-badge">${parseFloat(edge).toFixed(2)}%</div>
+                        </td>
                     </tr>
                 `;
             });
