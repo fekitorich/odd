@@ -11,13 +11,12 @@
         h1 { margin: 0; font-size: 28px; color: white; }
         .main-panel { background: var(--panel); padding: 40px; border-radius: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; }
         label { display: block; font-size: 11px; font-weight: bold; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; }
-        input { background: var(--bg); border: 1px solid #334155; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
-        .success { background: rgba(6,78,59,0.5); border: 1px solid var(--green); color: var(--green-text); padding: 12px; border-radius: 6px; font-size: 14px; }
+        /* Input de texto normal */
+        input[type="text"], input[type="number"] { background: var(--bg); border: 1px solid #334155; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .item { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 150px; margin-top: 20px; }
         
-        /* ABAS - Focadas para funcionar o clique */
         .tabs { display: flex; gap: 10px; margin-top: 40px; border-bottom: 1px solid #334155; }
         .tab { padding: 10px 20px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; }
         .tab.active { color: white; border-bottom: 2px solid var(--primary); font-weight: bold; }
@@ -37,8 +36,11 @@
         <form id="form">
             <div class="main-panel">
                 <div>
-                    <label>API KEY</label><div class="success">✓ Using API key from .env</div>
-                    <label style="margin-top:20px">STAKE ($)</label><input type="number" name="stake" value="100">
+                    <label>API KEY</label>
+                    <input type="text" name="apiKey" placeholder="Cole sua chave aqui..." required>
+                    
+                    <label style="margin-top:20px">STAKE ($)</label>
+                    <input type="number" name="stake" value="100">
                 </div>
                 <div>
                     <label>SPORTS</label>
@@ -73,11 +75,9 @@
             <div id="ev" class="content active">
                 <table><thead><tr><th>Sport / Event</th><th>Bet</th><th>Edge/ROI</th></tr></thead><tbody id="tb-ev"></tbody></table>
             </div>
-
             <div id="arb" class="content">
                 <table><thead><tr><th>Sport / Event</th><th>Bet</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
             </div>
-            
             <div id="mid" class="content">
                 <table><thead><tr><th>Sport / Event</th><th>Range</th><th>ROI</th></tr></thead><tbody id="tb-mid"></tbody></table>
             </div>
@@ -97,11 +97,14 @@
             const btn = document.getElementById('btn');
             btn.innerText = 'Scanning...';
             
+            // Pega o valor digitado no campo apiKey
+            const formData = new FormData(e.target);
             const payload = {
-                sports: [...new FormData(e.target).getAll('sports')],
-                regions: [...new FormData(e.target).getAll('regions')],
-                stake: document.querySelector('[name=stake]').value,
-                commission: document.querySelector('[name=commission]').value
+                apiKey: formData.get('apiKey'), // Pega o que você digitou
+                sports: [...formData.getAll('sports')],
+                regions: [...formData.getAll('regions')],
+                stake: formData.get('stake'),
+                commission: formData.get('commission')
             };
 
             try {
@@ -114,14 +117,12 @@
                 const data = await res.json();
                 document.getElementById('results').style.display = 'block';
                 
-                // Preenche as tabelas com os dados do seu scanner original
                 fill('tb-ev', data.plus_ev?.opportunities);
                 fill('tb-arb', data.arbitrage?.opportunities);
                 fill('tb-mid', data.middles?.opportunities);
                 
             } catch (err) {
-                console.error(err);
-                alert('Erro na conexão. Verifique os logs.');
+                alert('Erro na conexão.');
             } finally {
                 btn.innerText = 'Scan Now';
             }
@@ -130,14 +131,12 @@
         function fill(id, list) {
             const tb = document.getElementById(id);
             if (!list || list.length === 0) {
-                tb.innerHTML = '<tr><td colspan="3">Sem oportunidades +EV encontradas neste momento.</td></tr>';
+                tb.innerHTML = '<tr><td colspan="3">Sem oportunidades encontradas.</td></tr>';
                 return;
             }
             tb.innerHTML = '';
             list.forEach(i => {
-                // Tenta pegar o ROI ou o Edge, dependendo de como seu scanner nomeia
                 const roi = i.roi_percent || i.ev_percent || 0;
-                // Tenta pegar o mercado ou a aposta
                 const bet = i.market || i.bet || i.selection || '-';
                 
                 tb.innerHTML += `
