@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-from flask import Flask, jsonify, render_template, request
 from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request
 
-# Importa as suas configurações e o seu scanner original
+# Importações dos seus arquivos originais 
 from config import (
     DEFAULT_BANKROLL, DEFAULT_COMMISSION, DEFAULT_KELLY_FRACTION,
     DEFAULT_REGION_KEYS, DEFAULT_SHARP_BOOK, DEFAULT_SPORT_OPTIONS,
@@ -12,9 +12,9 @@ from config import (
 from scanner import run_scan
 
 load_dotenv()
-app = Flask(__name__)
 
-# Pega a chave das variáveis de ambiente do Railway
+app = Flask(__name__)
+# Chave vinda das variáveis de ambiente do Railway
 ENV_API_KEY = os.getenv("ODDS_API_KEY") or os.getenv("THEODDSAPI_API_KEY")
 
 @app.route("/")
@@ -38,7 +38,7 @@ def scan():
     payload = request.get_json(force=True, silent=True) or {}
     api_key = ENV_API_KEY or (payload.get("apiKey") or "").strip()
     
-    # Parâmetros vindos do formulário (Lógica original)
+    # Lógica de extração mantida do seu código original 
     sports = payload.get("sports") or []
     all_sports = bool(payload.get("allSports"))
     stake = payload.get("stake")
@@ -47,16 +47,16 @@ def scan():
     sharp_book = (payload.get("sharpBook") or DEFAULT_SHARP_BOOK).strip().lower()
 
     try:
-        stake_val = float(stake) if stake is not None else 100.0
         min_edge = float(payload.get("minEdgePercent")) if payload.get("minEdgePercent") is not None else MIN_EDGE_PERCENT
         bankroll = float(payload.get("bankroll")) if payload.get("bankroll") is not None else DEFAULT_BANKROLL
         kelly = float(payload.get("kellyFraction")) if payload.get("kellyFraction") is not None else DEFAULT_KELLY_FRACTION
-    except:
-        stake_val, min_edge, bankroll, kelly = 100.0, MIN_EDGE_PERCENT, DEFAULT_BANKROLL, DEFAULT_KELLY_FRACTION
+        stake_val = float(stake) if stake is not None else 100.0
+    except (TypeError, ValueError):
+        min_edge, bankroll, kelly, stake_val = MIN_EDGE_PERCENT, DEFAULT_BANKROLL, DEFAULT_KELLY_FRACTION, 100.0
 
     comm_rate = (float(commission) / 100.0) if commission is not None else DEFAULT_COMMISSION
 
-    # CHAMA O SEU SCANNER ORIGINAL
+    # Executa a função run_scan do seu scanner.py original 
     result = run_scan(
         api_key, sports, all_sports, stake_val,
         regions or DEFAULT_REGION_KEYS, comm_rate,
@@ -64,11 +64,12 @@ def scan():
         bankroll=bankroll, kelly_fraction=kelly
     )
     
-    return jsonify(result), (200 if result.get("success") else 500)
+    status = 200 if result.get("success") else result.get("error_code", 500)
+    return jsonify(result), status
 
 if __name__ == "__main__":
+    # Garante que a pasta 'data' exista para o scanner 
     Path("data").mkdir(exist_ok=True)
     # Porta dinâmica do Railway
     port = int(os.environ.get("PORT", 5000))
-    # Host 0.0.0.0 é obrigatório para o site ficar visível online
     app.run(host="0.0.0.0", port=port)
