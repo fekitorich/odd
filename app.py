@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
+from dotenv import load_dotenv
 
-# Importa a lógica do seu scanner e configurações originais
+# Importa a sua lógica e configurações originais
 from config import (
     DEFAULT_BANKROLL, DEFAULT_COMMISSION, DEFAULT_KELLY_FRACTION,
     DEFAULT_REGION_KEYS, DEFAULT_SHARP_BOOK, DEFAULT_SPORT_OPTIONS,
@@ -14,12 +14,12 @@ from scanner import run_scan
 load_dotenv()
 
 app = Flask(__name__)
-# Railway usa variáveis de ambiente para a chave da API
+# Railway usa variáveis de ambiente para a API KEY
 ENV_API_KEY = os.getenv("ODDS_API_KEY") or os.getenv("THEODDSAPI_API_KEY")
 
 @app.route("/")
 def index():
-    # Renderiza o seu index.html original (dentro da pasta /templates)
+    # Renderiza o index.html original (deve estar na pasta templates)
     return render_template(
         "index.html",
         default_sports=DEFAULT_SPORT_OPTIONS,
@@ -36,46 +36,29 @@ def index():
 
 @app.route("/scan", methods=["POST"])
 def scan():
+    # Recebe os cliques do botão 'Scan Now' do seu site
     payload = request.get_json(force=True, silent=True) or {}
     api_key = ENV_API_KEY or (payload.get("apiKey") or "").strip()
     
-    # Coleta os dados que o seu index.html envia quando você aperta "Scan Now"
-    sports = payload.get("sports")
-    all_sports = bool(payload.get("allSports"))
-    stake = payload.get("stake")
-    regions = payload.get("regions")
-    commission = payload.get("commission")
-    sharp_book = (payload.get("sharpBook") or DEFAULT_SHARP_BOOK).strip().lower()
-
-    # Converte os valores para os formatos que o seu scanner.py exige
-    try:
-        min_edge = float(payload.get("minEdgePercent") or MIN_EDGE_PERCENT)
-        bankroll = float(payload.get("bankroll") or DEFAULT_BANKROLL)
-        kelly = float(payload.get("kellyFraction") or DEFAULT_KELLY_FRACTION)
-        stake_val = float(stake or 100.0)
-    except:
-        min_edge, bankroll, kelly, stake_val = MIN_EDGE_PERCENT, DEFAULT_BANKROLL, DEFAULT_KELLY_FRACTION, 100.0
-
-    comm_rate = (float(commission) / 100.0) if commission is not None else DEFAULT_COMMISSION
-
-    # CHAMA O SCANNER ORIGINAL (Matemática pura do seu scanner.py)
+    # Chama o seu scanner original com os dados do formulário
     result = run_scan(
         api_key=api_key,
-        sports=sports,
-        all_sports=all_sports,
-        stake_amount=stake_val,
-        regions=regions or DEFAULT_REGION_KEYS,
-        commission_rate=comm_rate,
-        sharp_book=sharp_book,
-        min_edge_percent=min_edge,
-        bankroll=bankroll,
-        kelly_fraction=kelly
+        sports=payload.get("sports"),
+        all_sports=bool(payload.get("allSports")),
+        stake_amount=float(payload.get("stake") or 100.0),
+        regions=payload.get("regions") or DEFAULT_REGION_KEYS,
+        commission_rate=float(payload.get("commission") or 5) / 100.0,
+        sharp_book=payload.get("sharpBook") or DEFAULT_SHARP_BOOK,
+        min_edge_percent=float(payload.get("minEdgePercent") or MIN_EDGE_PERCENT),
+        bankroll=float(payload.get("bankroll") or DEFAULT_BANKROLL),
+        kelly_fraction=float(payload.get("kellyFraction") or DEFAULT_KELLY_FRACTION)
     )
     
-    # Retorna JSON (Dados) para o JavaScript do seu index.html preencher a tabela
+    # Retorna DADOS (JSON) para preencher as tabelas e gráficos originais
     return jsonify(result)
 
 if __name__ == "__main__":
     Path("data").mkdir(exist_ok=True)
     port = int(os.environ.get("PORT", 5000))
+    # host 0.0.0.0 é obrigatório para o Railway aceitar conexões
     app.run(host="0.0.0.0", port=port)
