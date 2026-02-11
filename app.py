@@ -1,45 +1,122 @@
+from __future__ import annotations
+
+import argparse
 import os
-from flask import Flask, render_template, request
-from scanner import run_scan  # Importa a função REAL do arquivo acima
+import socket
+import threading
+# import webbrowser  <-- REMOVIDO PARA NÃO TRAVAR O SERVIDOR
+from pathlib import Path
+from typing import Optional
 
-# Configuração para rodar na raiz sem pastas extras
-basedir = os.path.abspath(os.path.dirname(__file__))
-app = Flask(__name__, template_folder=basedir, static_folder=basedir)
+from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request
 
-@app.route("/", methods=["GET"])
-def index():
-    # Renderiza a página inicial limpa
-    return render_template("index.html", results=None)
+from config import (
+    DEFAULT_BANKROLL,
+    DEFAULT_COMMISSION,
+    DEFAULT_KELLY_FRACTION,
+    DEFAULT_REGION_KEYS,
+    DEFAULT_SHARP_BOOK,
+    DEFAULT_SPORT_OPTIONS,
+    KELLY_OPTIONS,
+    MIN_EDGE_PERCENT,
+    REGION_OPTIONS,
+    SHARP_BOOKS,
+)
+from scanner import run_scan
+
+load_dotenv()
+
+app = Flask(__name__)
+ENV_API_KEY = os.getenv("ODDS_API_KEY") or os.getenv("THEODDSAPI_API_KEY")
+
+
+@app.route("/")
+def index() -> str:
+    return render_template(
+        "index.html",
+        default_sports=DEFAULT_SPORT_OPTIONS,
+        region_options=REGION_OPTIONS,
+        default_commission_percent=int(DEFAULT_COMMISSION * 100),
+        has_env_key=bool(ENV_API_KEY),
+        sharp_books=SHARP_BOOKS,
+        default_sharp_book=DEFAULT_SHARP_BOOK,
+        default_min_edge_percent=MIN_EDGE_PERCENT,
+        default_bankroll=DEFAULT_BANKROLL,
+        default_kelly_fraction=DEFAULT_KELLY_FRACTION,
+        kelly_options=KELLY_OPTIONS,
+    )
+
 
 @app.route("/scan", methods=["POST"])
-def scan():
-    # 1. Pega os dados que você digitou no site
-    api_key = os.environ.get("ODDS_API_KEY") or request.form.get("apiKey")
-    
-    # Tratamento de erros para números
+def scan() -> tuple:
+    payload = request.get_json(force=True, silent=True) or {}
+    api_key = ENV_API_KEY or (payload.get("apiKey") or "").strip()
+    sports = payload.get("sports") or []
+    all_sports = bool(payload.get("allSports"))
+    stake = payload.get("stake")
+    regions = payload.get("regions")
+    commission = payload.get("commission")
+    sharp_book = (payload.get("sharpBook") or DEFAULT_SHARP_BOOK).strip().lower()
     try:
-        bankroll = float(request.form.get("bankroll", 1000))
-        commission = float(request.form.get("commission", 5))
-    except ValueError:
-        bankroll = 1000.0
-        commission = 5.0
-        
-    sports = request.form.getlist("sports")
-    regions = request.form.getlist("regions")
-
-    # 2. CHAMA O SCANNER REAL
-    # Isso vai demorar alguns segundos enquanto conecta na TheOddsAPI
-    opportunities = []
-    error_msg = None
-    
+        min_edge_percent = (
+            float(payload.get("minEdgePercent")) if payload.get("minEdgePercent") is not None else MIN_EDGE_PERCENT
+        )
+    except (TypeError, ValueError):
+        min_edge_percent = MIN_EDGE_PERCENT
+    min_edge_percent = max(0.0, min_edge_percent)
     try:
-        opportunities = run_scan(api_key, sports, regions, commission, bankroll)
-    except Exception as e:
-        error_msg = f"Erro no Scanner: {str(e)}"
+        bankroll_value = float(payload.get("bankroll")) if payload.get("bankroll") is not None else DEFAULT_BANKROLL
+    except (TypeError, ValueError):
+        bankroll_value = DEFAULT_BANKROLL
+    bankroll_value = max(0.0, bankroll_value)
+    try:
+        kelly_fraction = (
+            float(payload.get("kellyFraction"))
+            if payload.get("kellyFraction") is not None
+            else DEFAULT_KELLY_FRACTION
+        )
+    except (TypeError, ValueError):
+        kelly_fraction = DEFAULT_KELLY_FRACTION
+    kelly_fraction = max(0.0, min(kelly_fraction, 1.0))
+    try:
+        stake_value = float(stake) if stake is not None else 100.0
+    except (TypeError, ValueError):
+        stake_value = 100.0
+    if isinstance(regions, list):
+        regions_value = [str(region) for region in regions if isinstance(region, str)]
+    else:
+        regions_value = None
+    try:
+        commission_percent = float(commission) if commission is not None else None
+    except (TypeError, ValueError):
+        commission_percent = None
+    commission_rate = (
+        commission_percent / 100.0 if commission_percent is not None else DEFAULT_COMMISSION
+    )
+    result = run_scan(
+        api_key,
+        sports,
+        all_sports,
+        stake_value,
+        regions_value or DEFAULT_REGION_KEYS,
+        commission_rate,
+        sharp_book=sharp_book,
+        min_edge_percent=min_edge_percent,
+        bankroll=bankroll_value,
+        kelly_fraction=kelly_fraction,
+    )
+    status = 200 if result.get("success") else result.get("error_code", 500)
+    return jsonify(result), status
 
-    # 3. Devolve a página com a tabela preenchida (se houver dados)
-    return render_template("index.html", results=opportunities, searched=True, error=error_msg)
+
+def ensure_data_dir() -> None:
+    Path("data").mkdir(exist_ok=True)
+
 
 if __name__ == "__main__":
+    # Configuração para rodar no Railway ou Localmente sem abrir navegador
+    ensure_data_dir()
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    # host='0.0.0.0' é OBRIGATÓRIO para funcionar no Railway
+    app.run(host="0.0.0.0", port=port, debug=False)
