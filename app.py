@@ -45,6 +45,12 @@ def scan():
     except Exception as e:
         return jsonify({"error": str(e), "success": False}), 500
 
+# ... (mantenha todo o seu código de rotas e imports acima)
+
 if __name__ == "__main__":
+    # 1. Tenta pegar a porta que o Railway enviou
+    # 2. Se não encontrar (rodando local), usa a 5000
     port = int(os.environ.get("PORT", 5000))
+    
+    # IMPORTANTE: host="0.0.0.0" é obrigatório para o Railway conseguir "enxergar" o app
     app.run(host="0.0.0.0", port=port)
