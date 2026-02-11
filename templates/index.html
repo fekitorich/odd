@@ -2,160 +2,189 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Edge Scanner Global - Pro +EV</title>
+    <title>Edge Scanner - MODO DIAGNÓSTICO</title>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #064e3b; --green-text: #34d399; --red: #7f1d1d; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; margin: 0; }
+        :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #064e3b; --red: #7f1d1d; }
+        body { background: var(--bg); color: var(--text); font-family: monospace; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .main-panel { background: var(--panel); padding: 25px; border-radius: 12px; display: grid; grid-template-columns: 320px 1fr; gap: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.5); }
-        label { display: block; font-size: 10px; font-weight: bold; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
-        input { background: var(--bg); border: 1px solid #334155; color: white; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 15px; }
-        .sports-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .cat-title { color: var(--primary); font-size: 11px; font-weight: bold; border-bottom: 1px solid #334155; margin-bottom: 10px; padding-bottom: 3px; }
-        .item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 5px; color: #cbd5e1; cursor: pointer; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
-        .btn:hover { background: #2563eb; }
         
-        .results-box { background: var(--panel); margin-top: 20px; border-radius: 8px; overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 15px; font-size: 11px; color: #94a3b8; text-transform: uppercase; background: rgba(0,0,0,0.2); }
-        td { padding: 18px 15px; border-bottom: 1px solid #334155; font-size: 13px; vertical-align: top; }
+        .panel { background: var(--panel); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
         
-        .bet-card { background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 6px; border-left: 4px solid var(--primary); }
-        .bet-selection { color: white; font-size: 16px; font-weight: bold; display: block; margin-bottom: 4px; }
-        .bet-meta { color: #94a3b8; font-size: 12px; }
-        .odd-highlight { color: var(--green-text); font-weight: bold; font-size: 15px; }
-        .edge-badge { background: rgba(6, 78, 59, 0.6); color: var(--green-text); padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 14px; border: 1px solid var(--green); }
+        /* Botões */
+        .btn { padding: 15px; width: 100%; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn-scan { background: var(--primary); color: white; }
+        .btn-scan:hover { background: #2563eb; }
+        .btn-debug { background: #000; color: #0f0; border: 1px solid #0f0; margin-top: 20px; font-family: monospace; }
+
+        /* Tabela */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 10px; background: rgba(0,0,0,0.3); color: #94a3b8; }
+        td { padding: 10px; border-bottom: 1px solid #334155; vertical-align: top; }
+        
+        /* Debug Area */
+        #raw-json { 
+            display: none; 
+            white-space: pre-wrap; 
+            background: #000; 
+            color: #0f0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            font-size: 11px; 
+            border: 1px solid #333;
+            max-height: 500px;
+            overflow-y: scroll;
+        }
+
+        .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-right: 5px; }
+        .tag-market { background: #334155; color: #60a5fa; }
+        .tag-bookie { background: #334155; color: #fbbf24; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <form id="form" class="main-panel">
-            <div>
-                <label>API KEY</label>
-                <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958">
-                <label>REGIONS (Sharps & Softs)</label>
-                <div style="font-size:12px; margin-bottom:15px; display: grid; gap: 8px;">
-                    <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU (Pinnacle/Sharps)</label>
-                    <label class="item"><input type="checkbox" name="regions" value="uk" checked> UK (Betfair/Decimais)</label>
-                </div>
-                <button type="submit" class="btn" id="btn">Scan +EV Now</button>
-            </div>
-            <div>
-                <label>LIGAS SELECIONADAS (NBA, NFL & AMÉRICAS)</label>
-                <div class="sports-grid">
-                    <div>
-                        <div class="cat-title">US Sports</div>
-                        <label class="item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
-                        <label class="item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_serie_b" checked> Brasil Série B</label>
-                    </div>
-                    <div>
-                        <div class="cat-title">Sul-Americanos</div>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_argentina_primera" checked> Argentino</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_chile_primera" checked> Chileno</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_bolivia_primera" checked> Boliviano</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_paraguay_primera" checked> Paraguaio</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_uruguay_primera" checked> Uruguaio</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_peru_primera" checked> Peruano</label>
-                    </div>
-                </div>
-            </div>
-        </form>
 
-        <div id="results-area" class="results-box" style="display:none;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Evento / Liga</th>
-                        <th>Onde e o que Apostar</th>
-                        <th>Valor (+EV)</th>
-                    </tr>
-                </thead>
-                <tbody id="tb-ev"></tbody>
-            </table>
+<div class="container">
+    <h2 style="color: white;">SCANNER DIAGNÓSTICO</h2>
+    
+    <form id="form" class="panel">
+        <label>API KEY</label>
+        <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958" style="width:100%; padding:8px; margin-bottom:10px; background:#0f172a; border:1px solid #334155; color:white;">
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <div>
+                <label style="color:#94a3b8; font-size:12px;">LIGAS</label><br>
+                <label><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label><br>
+                <label><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label><br>
+                <label><input type="checkbox" name="sports" value="americanfootball_nfl"> NFL</label>
+            </div>
+            <div>
+                <label style="color:#94a3b8; font-size:12px;">REGIÕES</label><br>
+                <label><input type="checkbox" name="regions" value="eu" checked> EU (Pinnacle)</label>
+                <label><input type="checkbox" name="regions" value="uk" checked> UK (Betfair)</label>
+            </div>
         </div>
+
+        <button type="submit" id="btn" class="btn btn-scan">SCAN NOW (Buscar Tudo)</button>
+    </form>
+
+    <div id="results" class="panel" style="display:none;">
+        <h3 style="margin:0 0 15px 0;">Resultados Encontrados</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Jogo / Liga</th>
+                    <th>Aposta (Tentativa de Leitura)</th>
+                    <th>Lucro (%)</th>
+                </tr>
+            </thead>
+            <tbody id="tb-body"></tbody>
+        </table>
     </div>
 
-    <script>
-        document.getElementById('form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn');
-            const results = document.getElementById('results-area');
-            btn.innerText = 'Calculando Valor Esperado...';
-            btn.disabled = true;
+    <button onclick="toggleDebug()" class="btn btn-debug">🛠️ ABRIR DADOS BRUTOS (JSON)</button>
+    <div id="raw-json">Clique no botão acima após o scan para ver o que a API mandou.</div>
+</div>
 
-            try {
-                const formData = new FormData(e.target);
-                const payload = {
-                    apiKey: formData.get('apiKey'),
-                    sports: [...formData.getAll('sports')],
-                    regions: [...formData.getAll('regions')],
-                    stake: 100
-                };
+<script>
+    let lastData = null;
 
-                const res = await fetch('/scan', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                
-                results.style.display = 'block';
-                renderEVTable(data.plus_ev?.opportunities);
+    function toggleDebug() {
+        const div = document.getElementById('raw-json');
+        div.style.display = div.style.display === 'block' ? 'none' : 'block';
+        if(lastData) div.textContent = JSON.stringify(lastData, null, 2);
+    }
 
-            } catch (err) {
-                alert("Erro: " + err.message);
-            } finally {
-                btn.innerText = 'Scan +EV Now';
-                btn.disabled = false;
-            }
-        });
+    document.getElementById('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn');
+        const tbody = document.getElementById('tb-body');
+        const results = document.getElementById('results');
+        
+        btn.innerText = 'Processando...';
+        btn.disabled = true;
+        tbody.innerHTML = '';
 
-        function renderEVTable(list) {
-            const tbody = document.getElementById('tb-ev');
-            tbody.innerHTML = '';
+        try {
+            const formData = new FormData(e.target);
+            const payload = {
+                apiKey: formData.get('apiKey'),
+                sports: [...formData.getAll('sports')],
+                regions: [...formData.getAll('regions')],
+                stake: 100
+            };
 
-            if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#64748b;">Nenhuma aposta com Valor Esperado (+EV) no momento.</td></tr>';
-                return;
-            }
-
-            list.forEach(item => {
-                // Identifica a aposta específica (Over, Under, Time, etc)
-                const betName = item.selection || item.name || 'Seleção';
-                const line = item.point ? ` ${item.point}` : '';
-                const fullBet = `${betName}${line}`;
-
-                // Identifica a casa e a odd
-                const bookie = item.bookmaker || item.bookie || 'Casa de Aposta';
-                const odd = item.price || item.odds || 'N/A';
-                
-                // Pega a margem de lucro (+EV)
-                const edge = item.edge_percent || item.roi || 0;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="width: 300px;">
-                            <div style="font-weight:bold; color:white; font-size:14px;">${item.event || 'Jogo'}</div>
-                            <div style="color:#94a3b8; font-size:11px; margin-top:4px;">${item.sport?.toUpperCase() || 'LIGA'}</div>
-                        </td>
-                        <td>
-                            <div class="bet-card">
-                                <span class="bet-selection">${fullBet}</span>
-                                <span class="bet-meta">
-                                    Apostar na <b>${bookie}</b> <span class="odd-highlight">@ ${odd}</span>
-                                </span>
-                            </div>
-                        </td>
-                        <td style="width: 150px; text-align: center;">
-                            <div class="edge-badge">${parseFloat(edge).toFixed(2)}%</div>
-                        </td>
-                    </tr>
-                `;
+            const res = await fetch('/scan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
             });
+            const data = await res.json();
+            lastData = data; // Salva para o debug
+
+            results.style.display = 'block';
+
+            // Junta tudo (+EV e Arbitragem) em uma lista só para testar
+            let allOps = [];
+            if(data.plus_ev?.opportunities) allOps = allOps.concat(data.plus_ev.opportunities);
+            if(data.arbitrage?.opportunities) allOps = allOps.concat(data.arbitrage.opportunities);
+
+            if (allOps.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">NENHUM DADO RETORNADO PELA API.<br>Verifique se tem saldo ou se as ligas tem jogos hoje.</td></tr>';
+            } else {
+                allOps.forEach(item => {
+                    // TENTATIVA DE LEITURA À PROVA DE FALHAS
+                    const sport = item.sport || item.sport_key || 'N/A';
+                    const event = item.event || item.match || 'N/A';
+                    const roi = item.edge_percent || item.roi || item.profit || 0;
+                    
+                    // Constrói a aposta varrendo tudo
+                    let betHTML = '';
+                    
+                    // Se tiver lista de outcomes
+                    if (item.outcomes && item.outcomes.length) {
+                        item.outcomes.forEach(oc => {
+                            // Procura qualquer chave que pareça uma odd ou nome
+                            const name = oc.name || oc.selection || 'Sel?';
+                            const book = oc.bookmaker || oc.bookie || 'Casa?';
+                            const price = oc.price || oc.odds || oc.decimal || 'Odd?';
+                            const point = oc.point || item.point || ''; // Linha (Over 2.5)
+                            
+                            betHTML += `<div style="margin-bottom:5px;">
+                                <span class="tag tag-market">${item.market || 'Mkt'}</span>
+                                <b>${name} ${point}</b> na <span class="tag tag-bookie">${book}</span> @ <b>${price}</b>
+                            </div>`;
+                        });
+                    } 
+                    // Se for objeto simples
+                    else {
+                        const name = item.selection || item.name || 'Sel?';
+                        const book = item.bookmaker || item.bookie || 'Casa?';
+                        const price = item.price || item.odds || 'Odd?';
+                        const point = item.point ? `(${item.point})` : '';
+                        
+                        betHTML = `<div>
+                            <span class="tag tag-market">${item.market || 'Mkt'}</span>
+                            <b>${name} ${point}</b> na <span class="tag tag-bookie">${book}</span> @ <b>${price}</b>
+                        </div>`;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><b>${sport}</b><br><small>${event}</small></td>
+                            <td>${betHTML}</td>
+                            <td style="color:${roi > 0 ? '#34d399' : '#f87171'}; font-weight:bold;">${parseFloat(roi).toFixed(2)}%</td>
+                        </tr>
+                    `;
+                });
+            }
+
+        } catch (err) {
+            alert('ERRO TÉCNICO: ' + err.message);
+        } finally {
+            btn.innerText = 'SCAN NOW';
+            btn.disabled = false;
         }
-    </script>
+    });
+</script>
+
 </body>
 </html>
