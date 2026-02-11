@@ -25,13 +25,8 @@
             padding: 40px;
         }
 
-        /* LAYOUT GERAL */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
 
-        /* HEADER */
         .header {
             display: flex;
             justify-content: space-between;
@@ -56,18 +51,16 @@
         }
         .toggle-btn.active { background: var(--primary); color: white; }
 
-        /* PAINEL PRINCIPAL */
         .main-panel {
             background-color: var(--panel-bg);
             border-radius: 16px;
             padding: 40px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 3 Colunas como no print */
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 40px;
         }
 
-        /* ELEMENTOS DO FORMULÁRIO */
         .form-section { display: flex; flex-direction: column; gap: 20px; }
         
         label {
@@ -80,8 +73,7 @@
             text-transform: uppercase;
         }
 
-        /* Inputs */
-        input[type="number"], input[type="text"] {
+        input[type="number"] {
             background: var(--bg-dark);
             border: 1px solid var(--border);
             color: white;
@@ -92,7 +84,6 @@
             font-size: 14px;
         }
 
-        /* Caixa Verde da API */
         .api-success {
             background-color: rgba(6, 78, 59, 0.5);
             border: 1px solid var(--success-bg);
@@ -105,10 +96,9 @@
             gap: 8px;
         }
 
-        /* Checkboxes (Sports e Regions) */
         .checkbox-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* 2 colunas para os times */
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
         
@@ -120,16 +110,6 @@
             cursor: pointer;
         }
 
-        input[type="checkbox"] {
-            accent-color: var(--primary);
-            width: 16px;
-            height: 16px;
-            background: var(--bg-dark);
-            border-color: var(--border);
-            cursor: pointer;
-        }
-
-        /* Botão Scan */
         .scan-btn {
             background-color: var(--primary);
             color: white;
@@ -142,9 +122,45 @@
             width: 150px;
             margin-top: 20px;
         }
-        .scan-btn:hover { background-color: #2563eb; }
 
-        /* Ajustes Mobile */
+        /* ÁREA DE RESULTADOS */
+        .results-container {
+            margin-top: 40px;
+            background: var(--panel-bg);
+            border-radius: 16px;
+            padding: 20px;
+            display: none; /* Escondido até ter resultados */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 15px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .roi-badge {
+            background: var(--success-bg);
+            color: var(--success-text);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
         @media (max-width: 900px) {
             .main-panel { grid-template-columns: 1fr; }
         }
@@ -164,7 +180,7 @@
             </div>
         </div>
 
-        <form action="/scan" method="POST">
+        <form id="scanner-form">
             <div class="main-panel">
                 
                 <div class="form-section">
@@ -176,62 +192,110 @@
                     </div>
                     <div>
                         <label>TOTAL STAKE ($)</label>
-                        <input type="number" name="bankroll" value="100">
-                        <div class="subtitle" style="font-size: 12px; margin-top: 5px;">Used for arbitrage + middles stake splits.</div>
+                        <input type="number" name="stake" value="100">
                     </div>
-                    
-                    <div style="margin-top: auto;">
-                        </div>
                 </div>
 
                 <div class="form-section">
                     <label>SPORTS</label>
                     <div class="checkbox-grid">
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="nfl" checked> NFL</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="nba" checked> NBA</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="mlb" checked> MLB</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="nhl" checked> NHL</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="premierleague" checked> Premier League</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="laliga" checked> La Liga</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="bundesliga" checked> Bundesliga</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="seriea" checked> Serie A</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="ligue1" checked> Ligue 1</label>
-                        <label class="checkbox-item"><input type="checkbox" name="sports" value="mls" checked> MLS</label>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <label class="checkbox-item" style="color: white;">
-                            <input type="checkbox" name="all_sports"> Scan all active sports (uses more API credits)
-                        </label>
-                        <div class="subtitle" style="font-size: 11px;">Each selected sport consumes one API request.</div>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="baseball_mlb" checked> MLB</label>
                     </div>
                 </div>
 
                 <div class="form-section">
-                    <div>
-                        <label>REGIONS</label>
-                        <div class="checkbox-grid">
-                            <label class="checkbox-item"><input type="checkbox" name="regions" value="us" checked> United States</label>
-                            <label class="checkbox-item"><input type="checkbox" name="regions" value="us2" checked> United States (Add.)</label>
-                            <label class="checkbox-item"><input type="checkbox" name="regions" value="uk" checked> United Kingdom</label>
-                            <label class="checkbox-item"><input type="checkbox" name="regions" value="eu" checked> Europe</label>
-                            <label class="checkbox-item"><input type="checkbox" name="regions" value="au"> Australia</label>
-                        </div>
-                        <div class="subtitle" style="font-size: 11px; margin-top: 5px;">Select at least one region. EU is always included for sharp reference.</div>
+                    <label>REGIONS</label>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="us" checked> US</label>
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="eu" checked> Europe</label>
                     </div>
-
-                    <div style="background: #253045; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
-                        <label>EXCHANGE COMMISSION (%)</label>
-                        <div class="subtitle" style="margin-bottom: 10px;">Applied to Betfair, Matchbook, etc.</div>
+                    <div style="background: #253045; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-top: 10px;">
+                        <label>COMMISSION (%)</label>
                         <input type="number" name="commission" value="1">
-                        <div class="subtitle" style="font-size: 11px; margin-top: 5px;">Net ROI/EV already reflects this commission.</div>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="scan-btn">Scan Now</button>
+            <button type="submit" class="scan-btn" id="btn-text">Scan Now</button>
         </form>
+
+        <div id="results-area" class="results-container">
+            <h3>Oportunidades Encontradas</h3>
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>Esporte</th>
+                        <th>Evento</th>
+                        <th>Mercado</th>
+                        <th>ROI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
     </div>
 
+    <script>
+        // ESTA É A LÓGICA QUE FALTAVA
+        document.getElementById('scanner-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Impede de abrir a página branca
+            
+            const btn = document.getElementById('btn-text');
+            const resultsArea = document.getElementById('results-area');
+            const tbody = document.querySelector('#results-table tbody');
+            
+            btn.innerText = 'Scanning...';
+            btn.disabled = true;
+
+            // Pega os dados do formulário
+            const formData = new FormData(e.target);
+            const data = {
+                sports: formData.getAll('sports'),
+                regions: formData.getAll('regions'),
+                stake: formData.get('stake'),
+                commission: formData.get('commission')
+            };
+
+            try {
+                // Envia para o servidor em silêncio
+                const response = await fetch('/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                tbody.innerHTML = '';
+                resultsArea.style.display = 'block';
+
+                if (result.arbitrage && result.arbitrage.opportunities.length > 0) {
+                    result.arbitrage.opportunities.forEach(opp => {
+                        const row = `
+                            <tr>
+                                <td>${opp.sport}</td>
+                                <td>${opp.event}</td>
+                                <td>${opp.market}</td>
+                                <td><span class="roi-badge">${opp.roi_percent}%</span></td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4">Nenhuma oportunidade encontrada no momento.</td></tr>';
+                }
+
+            } catch (error) {
+                alert('Erro ao escanear. Verifique os logs do Railway.');
+            } finally {
+                btn.innerText = 'Scan Now';
+                btn.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>
-
