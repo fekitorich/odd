@@ -7,14 +7,14 @@
         :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #064e3b; --green-text: #34d399; --red: #7f1d1d; --red-text: #f87171; }
         body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; margin: 0; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .main-panel { background: var(--panel); padding: 25px; border-radius: 12px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+        .main-panel { background: var(--panel); padding: 25px; border-radius: 12px; display: grid; grid-template-columns: 320px 1fr; gap: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.5); }
         label { display: block; font-size: 10px; font-weight: bold; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
         input { background: var(--bg); border: 1px solid #334155; color: white; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 15px; }
-        .sports-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .sports-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         .cat-title { color: var(--primary); font-size: 11px; font-weight: bold; border-bottom: 1px solid #334155; margin-bottom: 10px; padding-bottom: 3px; }
         .item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 5px; color: #cbd5e1; cursor: pointer; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; transition: 0.3s; }
-        .btn:hover { background: #2563eb; transform: translateY(-1px); }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .btn:hover { background: #2563eb; }
         .tabs { display: flex; gap: 10px; margin-top: 20px; border-bottom: 1px solid #334155; }
         .tab { padding: 10px 20px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; }
         .tab.active { color: white; border-bottom: 2px solid var(--primary); font-weight: bold; }
@@ -26,7 +26,7 @@
         .roi-badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; }
         .roi-pos { background: rgba(6, 78, 59, 0.4); color: var(--green-text); border: 1px solid var(--green); }
         .bet-box { background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px; border-left: 4px solid var(--primary); margin-bottom: 8px; }
-        .bookie { color: #94a3b8; font-size: 11px; font-weight: normal; }
+        .bookie { color: #94a3b8; font-size: 11px; }
         .market-tag { font-size: 10px; background: #334155; padding: 2px 6px; border-radius: 4px; color: #3b82f6; font-weight: bold; margin-bottom: 6px; display: inline-block; }
     </style>
 </head>
@@ -38,31 +38,28 @@
                 <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958">
                 <label>STAKE TOTAL ($)</label>
                 <input type="number" name="stake" value="100">
-                <label>REGIONS (Sharps + Softs)</label>
+                <label>REGIONS</label>
                 <div style="font-size:12px; margin-bottom:15px; display: grid; gap: 8px;">
                     <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU (Pinnacle/Sharps)</label>
                     <label class="item"><input type="checkbox" name="regions" value="uk" checked> UK (Betfair/Decimais)</label>
-                    <label class="item"><input type="checkbox" name="regions" value="us"> US (Americanas)</label>
                 </div>
                 <button type="submit" class="btn" id="btn">Scan Now</button>
             </div>
             <div>
-                <label>FILTRO DE LIGAS (NBA, NFL & AMÉRICAS)</label>
+                <label>LIGAS AMÉRICAS + US</label>
                 <div class="sports-grid">
                     <div>
-                        <div class="cat-title">US Sports</div>
+                        <div class="cat-title">Principais</div>
                         <label class="item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
                         <label class="item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_serie_b" checked> Brasil Série B</label>
                     </div>
                     <div>
-                        <div class="cat-title">Brasil</div>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Série A</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_serie_b" checked> Série B</label>
-                    </div>
-                    <div>
-                        <div class="cat-title">América do Sul</div>
+                        <div class="cat-title">Sul-Americanos</div>
                         <label class="item"><input type="checkbox" name="sports" value="soccer_argentina_primera" checked> Argentino</label>
                         <label class="item"><input type="checkbox" name="sports" value="soccer_chile_primera" checked> Chileno</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_bolivia_primera" checked> Boliviano</label>
                         <label class="item"><input type="checkbox" name="sports" value="soccer_paraguay_primera" checked> Paraguaio</label>
                         <label class="item"><input type="checkbox" name="sports" value="soccer_uruguay_primera" checked> Uruguaio</label>
                         <label class="item"><input type="checkbox" name="sports" value="soccer_peru_primera" checked> Peruano</label>
@@ -77,10 +74,10 @@
                 <div class="tab" onclick="showTab('arb', this)">Arbitrage (Lucro Certo)</div>
             </div>
             <div id="ev" class="content active">
-                <table><thead><tr><th>Evento / Liga</th><th>Aposta Sugerida (Onde e Quanto)</th><th>Edge</th></tr></thead><tbody id="tb-ev"></tbody></table>
+                <table><thead><tr><th>Evento / Liga</th><th>Aposta Sugerida</th><th>Edge</th></tr></thead><tbody id="tb-ev"></tbody></table>
             </div>
             <div id="arb" class="content">
-                <table><thead><tr><th>Evento / Liga</th><th>Cálculo da Arbitragem</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
+                <table><thead><tr><th>Evento / Liga</th><th>Cálculo</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
             </div>
         </div>
     </div>
@@ -97,7 +94,7 @@
             e.preventDefault();
             const btn = document.getElementById('btn');
             const results = document.getElementById('results-area');
-            btn.innerText = 'Consultando Odds...';
+            btn.innerText = 'Processando...';
             btn.disabled = true;
 
             try {
@@ -119,7 +116,7 @@
                 renderTable('tb-ev', data.plus_ev?.opportunities);
                 renderTable('tb-arb', data.arbitrage?.opportunities);
             } catch (err) {
-                alert("Erro: " + err.message);
+                alert("Erro Fatal: " + err.message);
             } finally {
                 btn.innerText = 'Scan Now';
                 btn.disabled = false;
@@ -130,7 +127,7 @@
             const tbody = document.getElementById(tbodyId);
             tbody.innerHTML = '';
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">Nenhuma oportunidade encontrada no momento.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">Nenhuma oportunidade encontrada.</td></tr>';
                 return;
             }
 
@@ -138,33 +135,36 @@
                 const val = item.edge_percent || item.roi_percent || item.roi || 0;
                 let detailHtml = `<div class="market-tag">${item.market?.toUpperCase() || 'MARKET'}</div>`;
                 
-                // Lógica Inteligente para Outcomes (Over/Under, Spreads, etc)
                 const outcomes = item.outcomes || [];
                 
                 if (outcomes.length > 0) {
                     detailHtml += outcomes.map(oc => {
-                        // Detecta se é Over/Under (Totals) e adiciona a linha correta
-                        let betName = oc.name || 'Seleção';
-                        let line = item.point || oc.point || '';
+                        // DETECÇÃO DE PREÇO (Evita o Undefined)
+                        const odd = oc.price || oc.odds || oc.value || 'N/A';
+                        const bookie = oc.bookmaker || oc.bookie || 'Casa Desconhecida';
                         
-                        // Garante que mostre "Over 2.5" em vez de apenas "2.5"
-                        let fullBet = `${betName} ${line}`.trim();
+                        // DETECÇÃO DE MERCADO (Over/Under/Handicap)
+                        const name = oc.name || oc.selection || 'Aposta';
+                        const line = oc.point || item.point || '';
+                        const fullSelection = `${name} ${line}`.trim();
 
                         return `
                             <div class="bet-box">
-                                <span style="color:white; font-weight:bold;">${fullBet}</span><br>
-                                <span class="bookie">na <b>${oc.bookmaker}</b> @ <b style="color:var(--green-text)">${oc.price || oc.odds}</b></span>
+                                <span style="color:white; font-weight:bold;">${fullSelection}</span><br>
+                                <span class="bookie">na <b>${bookie}</b> @ <b style="color:var(--green-text)">${odd}</b></span>
                             </div>
                         `;
                     }).join('');
                 } else {
-                    // Fallback para quando o scanner envia dados simplificados
-                    let simpleName = item.selection || item.name || 'Resultado';
-                    let simpleLine = item.point ? ' ' + item.point : '';
+                    // Fallback para objetos simples sem lista de outcomes
+                    const simpleOdd = item.price || item.odds || 'N/A';
+                    const simpleName = item.selection || item.name || 'Resultado';
+                    const simpleLine = item.point ? ' ' + item.point : '';
+
                     detailHtml += `
                         <div class="bet-box">
                             <span style="color:white; font-weight:bold;">${simpleName}${simpleLine}</span><br>
-                            <span class="bookie">na <b>${item.bookmaker || 'Casa'}</b> @ <b style="color:var(--green-text)">${item.price || item.odds}</b></span>
+                            <span class="bookie">na <b>${item.bookmaker || 'Casa'}</b> @ <b style="color:var(--green-text)">${simpleOdd}</b></span>
                         </div>
                     `;
                 }
@@ -173,7 +173,7 @@
                     <tr>
                         <td>
                             <div style="font-weight:bold; color:white;">${item.sport || 'Esporte'}</div>
-                            <div style="color:#94a3b8; font-size:12px; margin-top:2px;">${item.event || 'Jogo'}</div>
+                            <div style="color:#94a3b8; font-size:11px; margin-top:2px;">${item.event || 'Jogo'}</div>
                         </td>
                         <td>${detailHtml}</td>
                         <td><span class="roi-badge roi-pos">${parseFloat(val).toFixed(2)}%</span></td>
