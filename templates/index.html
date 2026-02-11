@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner Latam PRO</title>
+    <title>Scanner Latam PRO V4</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #10b981; --gold: #fbbf24; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
@@ -19,13 +19,12 @@
 
         .checkbox-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; padding-right: 5px; }
         .cb-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #cbd5e1; cursor: pointer; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; }
-        .cb-item:hover { background: rgba(255,255,255,0.1); }
         .cb-item input { accent-color: var(--primary); }
 
         .results-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
         .results-table th { text-align: left; padding: 10px; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
         
-        .row-card td { background: var(--panel); padding: 15px; border-top: 1px solid #334155; border-bottom: 1px solid #334155; vertical-align: middle; }
+        .row-card td { background: var(--panel); padding: 15px; border-top: 1px solid #334155; border-bottom: 1px solid #334155; vertical-align: top; }
         .row-card td:first-child { border-left: 1px solid #334155; border-top-left-radius: 8px; border-bottom-left-radius: 8px; width: 25%; }
         .row-card td:last-child { border-right: 1px solid #334155; border-top-right-radius: 8px; border-bottom-right-radius: 8px; width: 10%; text-align: center; }
 
@@ -40,13 +39,15 @@
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; display: inline-block; margin-bottom: 5px; }
         .badge-arb { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid var(--gold); }
         .badge-ev { background: rgba(16, 185, 129, 0.2); color: var(--green); border: 1px solid var(--green); }
+        
+        .debug-text { font-size: 10px; color: #f87171; font-family: monospace; display: block; margin-top: 5px; word-break: break-all; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="color:white; margin:0;">SCANNER LATAM V3</h2>
+        <h2 style="color:white; margin:0;">SCANNER LATAM V4</h2>
     </div>
 
     <form id="form" class="control-panel">
@@ -65,7 +66,7 @@
             </div>
 
             <div>
-                <label>SELEÇÃO DE LIGAS</label>
+                <label>LIGAS (Série A/B + Latam Completo)</label>
                 <div class="checkbox-group">
                     <label class="cb-item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
                     <label class="cb-item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
@@ -132,9 +133,7 @@
             }
 
             let allOps = [];
-            // Prioridade para Arbitragem
             if(data.arbitrage?.opportunities) data.arbitrage.opportunities.forEach(op => { op.type = 'arb'; allOps.push(op); });
-            // Depois +EV
             if(data.plus_ev?.opportunities) data.plus_ev.opportunities.forEach(op => { op.type = 'ev'; allOps.push(op); });
 
             renderTable(allOps);
@@ -160,10 +159,10 @@
             const isArb = item.type === 'arb';
             let betsHTML = '';
             
-            // --- CORREÇÃO DO BURACO VAZIO ---
+            // --- LÓGICA DE DETECÇÃO DE DADOS ---
             
-            // 1. Se for ARBITRAGEM (Tem stakes.breakdown)
-            if (item.stakes && item.stakes.breakdown) {
+            // 1. ARBITRAGEM (Já sabemos que funciona)
+            if (isArb && item.stakes && item.stakes.breakdown) {
                 betsHTML = item.stakes.breakdown.map(bet => {
                     const line = (bet.point && bet.point > 0) ? `+${bet.point}` : (bet.point || '');
                     return `
@@ -174,37 +173,40 @@
                         <span class="bet-odd">@${bet.price}</span>
                     </div>`;
                 }).join('');
-            }
-            // 2. Se for +EV (Lista de outcomes)
-            else if (item.outcomes && item.outcomes.length > 0) {
-                betsHTML = item.outcomes.map(bet => {
+            } 
+            // 2. +EV (AQUI ESTÁ A MUDANÇA)
+            else {
+                // Tenta extrair dados de lista ou objeto único
+                const bets = (item.outcomes && item.outcomes.length > 0) ? item.outcomes : [item];
+                
+                betsHTML = bets.map(bet => {
+                    // FORÇA BRUTA: Testa todas as variáveis possíveis
+                    const name = bet.selection || bet.name || bet.outcome || bet.team || bet.bet || '???';
+                    const book = bet.bookmaker || bet.bookie || bet.book || bet.site || '???';
+                    
+                    // Testa Price, Odds, Value, Decimal, Rate
+                    let price = bet.price || bet.odds || bet.value || bet.decimal || bet.rate;
+                    if (!price) price = 'N/A';
+
+                    // Testa Point, Handicap, Spread
                     const p = bet.point || item.point;
                     const line = (p && p > 0) ? `+${p}` : (p || '');
+
+                    // DEBUG: Se não achar o preço, mostra o JSON cru para descobrirmos o erro
+                    let debugInfo = '';
+                    if (price === 'N/A' || name === '???') {
+                         debugInfo = `<span class="debug-text">DEBUG: ${JSON.stringify(bet)}</span>`;
+                    }
+
                     return `
                     <div class="bet-line type-ev">
                         <span style="font-size:10px; color:#cbd5e1; margin-right:8px;">VALOR</span>
-                        <span class="bet-pick">${bet.name || bet.selection} <span style="color:#60a5fa">${line}</span></span>
-                        <span class="bet-bookie">${bet.bookmaker}</span>
-                        <span class="bet-odd">@${bet.price}</span>
+                        <span class="bet-pick">${name} <span style="color:#60a5fa">${line}</span></span>
+                        <span class="bet-bookie">${book}</span>
+                        <span class="bet-odd">@${price}</span>
+                        ${debugInfo}
                     </div>`;
                 }).join('');
-            }
-            // 3. Se for +EV (Objeto Único/Plano - AQUI ESTAVA O ERRO)
-            else {
-                // Tenta ler os dados diretamente da raiz do objeto
-                const name = item.selection || item.name || item.team || 'Aposta';
-                const book = item.bookmaker || item.bookie || 'Casa';
-                const price = item.price || item.odds || 'N/A';
-                const p = item.point;
-                const line = (p && p > 0) ? `+${p}` : (p || '');
-                
-                betsHTML = `
-                <div class="bet-line type-ev">
-                    <span style="font-size:10px; color:#cbd5e1; margin-right:8px;">VALOR</span>
-                    <span class="bet-pick">${name} <span style="color:#60a5fa">${line}</span></span>
-                    <span class="bet-bookie">${book}</span>
-                    <span class="bet-odd">@${price}</span>
-                </div>`;
             }
 
             const badgeClass = isArb ? 'badge-arb' : 'badge-ev';
