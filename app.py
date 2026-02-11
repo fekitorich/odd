@@ -1,34 +1,146 @@
-import os
-from flask import Flask, jsonify, render_template, request
-from scanner import run_scan
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Edge Scanner</title>
+    <style>
+        /* CSS EXTRAÍDO DO SEU ORIGINAL scan.png */
+        :root {
+            --bg-dark: #0f172a; --panel-bg: #1e293b; --text-main: #e2e8f0;
+            --text-muted: #94a3b8; --primary: #3b82f6; --success-bg: #064e3b;
+            --success-text: #34d399; --border: #334155;
+        }
+        body { background-color: var(--bg-dark); color: var(--text-main); font-family: sans-serif; margin: 0; padding: 40px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 28px; font-weight: 700; color: white; }
+        .subtitle { color: var(--text-muted); font-size: 14px; }
+        .main-panel {
+            background-color: var(--panel-bg); border-radius: 16px; padding: 40px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .form-section { display: flex; flex-direction: column; gap: 20px; }
+        label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        input { background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        .api-success { background: rgba(6, 78, 59, 0.5); border: 1px solid var(--success-bg); color: var(--success-text); padding: 12px; border-radius: 6px; font-size: 14px; }
+        .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .checkbox-item { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+        .scan-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 150px; margin-top: 20px; }
+        
+        /* ABAS */
+        .tabs { display: flex; gap: 10px; margin-top: 40px; border-bottom: 1px solid var(--border); }
+        .tab { padding: 10px 20px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+        .tab.active { color: white; border-bottom: 2px solid var(--primary); font-weight: bold; }
+        .tab-content { display: none; background: var(--panel-bg); padding: 20px; border-radius: 0 0 16px 16px; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase; padding: 10px; border-bottom: 1px solid var(--border); }
+        td { padding: 15px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .roi-badge { background: var(--success-bg); color: var(--success-text); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div><h1>Edge Scanner</h1><div class="subtitle">Arbitrage • Middles • +EV</div></div>
+        </div>
 
-app = Flask(__name__)
+        <form id="scanner-form">
+            <div class="main-panel">
+                <div class="form-section">
+                    <label>API KEY</label>
+                    <div class="api-success">✓ Using API key from .env</div>
+                    <label>TOTAL STAKE ($)</label>
+                    <input type="number" name="stake" value="100">
+                </div>
+                
+                <div class="form-section">
+                    <label>SPORTS</label>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="baseball_mlb" checked> MLB</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="soccer_spain_la_liga" checked> La Liga</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="soccer_italy_serie_a" checked> Serie A</label>
+                    </div>
+                </div>
 
-# O Railway já está lendo sua chave aqui
-ENV_API_KEY = os.getenv("ODDS_API_KEY")
+                <div class="form-section">
+                    <label>REGIONS</label>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="us" checked> United States</label>
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="uk" checked> United Kingdom</label>
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="eu" checked> Europe</label>
+                    </div>
+                    <label style="margin-top:10px">COMMISSION (%)</label>
+                    <input type="number" name="commission" value="1">
+                </div>
+            </div>
+            <button type="submit" class="scan-btn" id="btn-text">Scan Now</button>
+        </form>
 
-@app.route("/")
-def index():
-    # Apenas abre o site. Os nomes (NFL, NBA) agora estão fixos no HTML para não sumirem.
-    return render_template("index.html")
+        <div id="results-wrapper" style="display:none">
+            <div class="tabs">
+                <div id="t-arb" class="tab active" onclick="openTab('arbitrage')">Arbitrage</div>
+                <div id="t-mid" class="tab" onclick="openTab('middles')">Middles</div>
+                <div id="t-ev" class="tab" onclick="openTab('plus-ev')">+EV</div>
+            </div>
+            <div id="arbitrage" class="tab-content active">
+                <table><thead><tr><th>Sport</th><th>Event</th><th>Market</th><th>ROI</th></tr></thead><tbody id="arb-body"></tbody></table>
+            </div>
+            <div id="middles" class="tab-content">
+                <table><thead><tr><th>Sport</th><th>Event</th><th>Range</th><th>ROI</th></tr></thead><tbody id="mid-body"></tbody></table>
+            </div>
+            <div id="plus-ev" class="tab-content">
+                <table><thead><tr><th>Sport</th><th>Event</th><th>Edge</th><th>ROI</th></tr></thead><tbody id="ev-body"></tbody></table>
+            </div>
+        </div>
+    </div>
 
-@app.route("/scan", methods=["POST"])
-def scan():
-    # Captura o clique do botão Scan
-    payload = request.get_json() or {}
-    
-    # Manda os dados para o seu scanner.py original
-    result = run_scan(
-        api_key=ENV_API_KEY or payload.get("apiKey"),
-        sports=payload.get("sports"),
-        regions=payload.get("regions"),
-        stake_amount=float(payload.get("stake") or 100.0),
-        commission_rate=float(payload.get("commission") or 1.0) / 100.0
-    )
-    # Retorna os jogos como DADOS para a tabela (JSON)
-    return jsonify(result)
+    <script>
+        function openTab(id) {
+            document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'arbitrage') document.getElementById('t-arb').classList.add('active');
+            if(id === 'middles') document.getElementById('t-mid').classList.add('active');
+            if(id === 'plus-ev') document.getElementById('t-ev').classList.add('active');
+        }
 
-if __name__ == "__main__":
-    # Mantém a porta que o Railway já está usando
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+        document.getElementById('scanner-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-text');
+            btn.innerText = 'Scanning...';
+            const formData = new FormData(e.target);
+            const payload = {
+                sports: formData.getAll('sports'),
+                regions: formData.getAll('regions'),
+                stake: formData.get('stake'),
+                commission: formData.get('commission')
+            };
+
+            try {
+                const response = await fetch('/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                document.getElementById('results-wrapper').style.display = 'block';
+                fill('arb-body', data.arbitrage?.opportunities || [], 'market');
+                fill('mid-body', data.middles?.opportunities || [], 'range');
+                fill('ev-body', data.plus_ev?.opportunities || [], 'edge');
+            } catch (err) { alert('Falha técnica no Scan.'); }
+            finally { btn.innerText = 'Scan Now'; }
+        });
+
+        function fill(id, items, extra) {
+            const b = document.getElementById(id);
+            b.innerHTML = items.length ? '' : '<tr><td colspan="4">No opportunities found right now.</td></tr>';
+            items.forEach(o => {
+                b.innerHTML += `<tr><td>${o.sport}</td><td>${o.event}</td><td>${o[extra] || '-'}</td><td><span class="roi-badge">${o.roi_percent}%</span></td></tr>`;
+            });
+        }
+    </script>
+</body>
+</html>
