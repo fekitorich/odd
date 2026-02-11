@@ -11,12 +11,12 @@
         h1 { margin: 0; font-size: 28px; color: white; }
         .main-panel { background: var(--panel); padding: 40px; border-radius: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; }
         label { display: block; font-size: 11px; font-weight: bold; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; }
-        /* Input de texto normal */
-        input[type="text"], input[type="number"] { background: var(--bg); border: 1px solid #334155; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        input { background: var(--bg); border: 1px solid #334155; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .item { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 150px; margin-top: 20px; }
         
+        /* ABAS */
         .tabs { display: flex; gap: 10px; margin-top: 40px; border-bottom: 1px solid #334155; }
         .tab { padding: 10px 20px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; }
         .tab.active { color: white; border-bottom: 2px solid var(--primary); font-weight: bold; }
@@ -27,14 +27,165 @@
         td, th { padding: 15px; border-bottom: 1px solid #334155; text-align: left; }
         th { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
         .roi { background: var(--green); color: var(--green-text); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .error-msg { color: #f87171; background: rgba(248, 113, 113, 0.1); padding: 15px; border-radius: 8px; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header"><div><h1>Edge Scanner</h1><div style="font-size:14px;color:#94a3b8">Arbitrage • Middles • +EV</div></div></div>
+        <div class="header"><div><h1>Edge Scanner</h1><div style="font-size:14px;color:#94a3b8">Smart UI • Auto-Detect Columns</div></div></div>
         
         <form id="form">
             <div class="main-panel">
+                <div>
+                    <label>API KEY (Obrigatório)</label>
+                    <input type="text" name="apiKey" placeholder="Cole sua NOVA chave aqui..." required>
+                    
+                    <label style="margin-top:20px">STAKE ($)</label>
+                    <input type="number" name="stake" value="100">
+                </div>
+                <div>
+                    <label>SPORTS</label>
+                    <div class="grid">
+                        <label class="item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
+                        <label class="item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
+                        <label class="item"><input type="checkbox" name="sports" value="baseball_mlb" checked> MLB</label>
+                    </div>
+                </div>
+                <div>
+                    <label>REGIONS</label>
+                    <div class="grid">
+                        <label class="item"><input type="checkbox" name="regions" value="us" checked> US</label>
+                        <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU</label>
+                    </div>
+                    <label style="margin-top:20px">COMMISSION (%)</label><input type="number" name="commission" value="1">
+                </div>
+            </div>
+            <button type="submit" class="btn" id="btn">Scan Now</button>
+        </form>
+
+        <div id="error-box" class="error-msg"></div>
+
+        <div id="results" style="display:none">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('ev', this)">+EV</div>
+                <div class="tab" onclick="switchTab('arb', this)">Arbitrage</div>
+                <div class="tab" onclick="switchTab('mid', this)">Middles</div>
+            </div>
+            
+            <div id="ev" class="content active">
+                <table><thead><tr><th>Sport / Event</th><th>Bet / Market</th><th>Edge / ROI</th></tr></thead><tbody id="tb-ev"></tbody></table>
+            </div>
+            <div id="arb" class="content">
+                <table><thead><tr><th>Sport / Event</th><th>Bet / Market</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
+            </div>
+            <div id="mid" class="content">
+                <table><thead><tr><th>Sport / Event</th><th>Range</th><th>ROI</th></tr></thead><tbody id="tb-mid"></tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(id, el) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            el.classList.add('active');
+        }
+
+        document.getElementById('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn');
+            const errBox = document.getElementById('error-box');
+            
+            btn.innerText = 'Scanning...';
+            btn.disabled = true;
+            errBox.style.display = 'none';
+            document.getElementById('results').style.display = 'none';
+
+            const formData = new FormData(e.target);
+            const payload = {
+                apiKey: formData.get('apiKey'),
+                sports: [...formData.getAll('sports')],
+                regions: [...formData.getAll('regions')],
+                stake: formData.get('stake'),
+                commission: formData.get('commission')
+            };
+
+            try {
+                const res = await fetch('/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+
+                // DETECÇÃO DE ERRO DA API (O que apareceu no seu log)
+                if (data.success === false || data.error) {
+                    errBox.innerHTML = `<strong>Erro da API:</strong> ${data.error || 'Chave inválida ou limite excedido.'}`;
+                    errBox.style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('results').style.display = 'block';
+                
+                // Preenche as tabelas com a função inteligente
+                fillSmart('tb-ev', data.plus_ev?.opportunities);
+                fillSmart('tb-arb', data.arbitrage?.opportunities);
+                fillSmart('tb-mid', data.middles?.opportunities);
+                
+            } catch (err) {
+                errBox.innerText = 'Erro de conexão com o servidor. Tente novamente.';
+                errBox.style.display = 'block';
+            } finally {
+                btn.innerText = 'Scan Now';
+                btn.disabled = false;
+            }
+        });
+
+        // FUNÇÃO INTELIGENTE: Procura qualquer nome de coluna que o scanner mandar
+        function fillSmart(id, list) {
+            const tb = document.getElementById(id);
+            if (!list || list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#64748b;">Nenhuma oportunidade encontrada.</td></tr>';
+                return;
+            }
+            tb.innerHTML = '';
+            
+            list.forEach(item => {
+                // Tenta achar o ROI em várias chaves possíveis
+                const roiVal = item.roi_percent || item.ev_percent || item.profit || item.roi || 0;
+                
+                // Tenta achar o nome da aposta
+                const betName = item.market || item.bet || item.selection || item.description || '-';
+                
+                // Tenta achar o esporte e evento
+                const sportName = item.sport || item.sport_key || 'Unknown';
+                const eventName = item.event || item.match || 'Unknown Event';
+
+                // Formata o ROI (verde se positivo, vermelho se negativo)
+                const color = parseFloat(roiVal) >= 0 ? '#34d399' : '#f87171';
+                const bg = parseFloat(roiVal) >= 0 ? 'rgba(6,78,59,0.5)' : 'rgba(127,29,29,0.5)';
+
+                tb.innerHTML += `
+                    <tr>
+                        <td>
+                            <div style="font-size:11px; color:#94a3b8; font-weight:bold;">${sportName.toUpperCase()}</div>
+                            <div style="margin-top:4px;">${eventName}</div>
+                        </td>
+                        <td>${betName}</td>
+                        <td>
+                            <span class="roi" style="background:${bg}; color:${color};">
+                                ${parseFloat(roiVal).toFixed(2)}%
+                            </span>
+                        </td>
+                    </tr>`;
+            });
+        }
+    </script>
+</body>
+</html>            <div class="main-panel">
                 <div>
                     <label>API KEY</label>
                     <input type="text" name="apiKey" placeholder="Cole sua chave aqui..." required>
