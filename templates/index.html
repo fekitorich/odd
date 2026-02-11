@@ -55,7 +55,7 @@
 
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="color:white; margin:0;">SCANNER LATAM V5</h2>
+        <h2 style="color:white; margin:0;">SCANNER LATAM V7 (CORRIGIDO)</h2>
     </div>
 
     <form id="form" class="control-panel">
@@ -98,8 +98,8 @@
     <div id="loading" style="display:none; text-align:center; color:#64748b; padding:40px;">Buscando oportunidades...</div>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="openTab('tab-arb')">ARBITRAGEM (LUCRO CERTO)</button>
-        <button class="tab-btn" onclick="openTab('tab-ev')">+EV (VALOR ESPERADO)</button>
+        <button class="tab-btn active" onclick="openTab('tab-arb')">ARBITRAGEM</button>
+        <button class="tab-btn" onclick="openTab('tab-ev')">+EV (VALOR)</button>
     </div>
 
     <div id="tab-arb" class="tab-content active">
@@ -133,7 +133,6 @@
     function openTab(tabName) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        
         document.getElementById(tabName).classList.add('active');
         event.currentTarget.classList.add('active');
     }
@@ -224,15 +223,18 @@
         }
 
         list.forEach(item => {
-            // AQUI ESTÁ A CORREÇÃO BASEADA NO SEU PRINT DE DEBUG
+            // CORREÇÃO: Lê os dados de dentro do objeto 'bet' que vimos no print
             const roi = item.edge_percent || item.ev_per_100 || 0;
             
-            // Variáveis descobertas no Debug: 'outcome', 'soft_book', 'soft_odds'
-            const name = item.outcome || item.selection || 'Aposta';
-            const book = item.soft_book || item.bookmaker || 'Casa'; // CORRIGIDO
-            const price = item.soft_odds || item.odds || 'N/A';      // CORRIGIDO
+            // Verifica se o objeto 'bet' existe (baseado no print vermelho que vc mandou)
+            let betObj = item.bet || {}; 
             
-            const p = item.point;
+            // AQUI ESTAVA O ERRO: Os nomes das variaveis eram soft_book e soft_odds
+            const name = betObj.outcome || item.outcome || 'Aposta';
+            const book = betObj.soft_book || item.bookmaker || 'Casa';
+            const price = betObj.soft_odds || item.odds || 'N/A';
+            
+            const p = betObj.point || item.point;
             const line = (p && p > 0) ? `+${p}` : (p || '');
 
             const betHTML = `
