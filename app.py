@@ -1,12 +1,12 @@
 import os
 import sys
-import json
 from flask import Flask, jsonify, render_template, request
 from scanner import run_scan
 
 app = Flask(__name__)
 
-ENV_API_KEY = os.getenv("ODDS_API_KEY")
+# --- SUA CHAVE GRAVADA AQUI ---
+FIXED_KEY = "ac611e223968599cffdcd6c1944f9958"
 
 @app.route("/")
 def index():
@@ -16,29 +16,34 @@ def index():
 def scan():
     data = request.get_json() or {}
     
-    # 1. Pega a chave manual OU do ambiente
-    raw_key = data.get("apiKey") or ENV_API_KEY or ""
+    # Lógica Blindada:
+    # 1. Tenta pegar o que estiver na caixa do site.
+    # 2. Se a caixa estiver vazia, USA A CHAVE FIXA AUTOMATICAMENTE.
+    user_input = data.get("apiKey") or ""
+    final_key = user_input.strip()
     
-    # 2. LIMPEZA DE SEGURANÇA: Remove espaços invisíveis antes e depois
-    final_key = raw_key.strip()
+    if not final_key:
+        final_key = FIXED_KEY
 
-    # LOG: Vamos ver se a chave limpa está correta
-    print(f"--- DEBUG CHAVE ---", file=sys.stdout)
-    print(f"Chave recebida (limpa): {final_key[:5]}... (tamanho: {len(final_key)})", file=sys.stdout)
+    # Filtros padrão
+    sports = data.get("sports") or []
+    regions = data.get("regions") or ["us"]
+    stake = float(data.get("stake") or 100)
+    commission = float(data.get("commission") or 1) / 100.0
 
     try:
+        # Chama o scanner original
         result = run_scan(
             api_key=final_key,
-            sports=data.get("sports"),
-            regions=data.get("regions"),
-            stake_amount=float(data.get("stake") or 100),
-            commission_rate=float(data.get("commission") or 1) / 100.0
+            sports=sports,
+            regions=regions,
+            stake_amount=stake,
+            commission_rate=commission
         )
         return jsonify(result)
-
+        
     except Exception as e:
-        print(f"ERRO CRÍTICO: {e}", file=sys.stdout)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "success": False}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
