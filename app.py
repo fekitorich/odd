@@ -1,10 +1,11 @@
 import os
+import sys
+import json
 from flask import Flask, jsonify, render_template, request
 from scanner import run_scan
 
 app = Flask(__name__)
 
-# Chave de backup do servidor
 ENV_API_KEY = os.getenv("ODDS_API_KEY")
 
 @app.route("/")
@@ -15,12 +16,18 @@ def index():
 def scan():
     data = request.get_json() or {}
     
-    # MUDANÇA CRÍTICA:
-    # 1. Tenta pegar a chave que você digitou no site.
-    # 2. Se você deixar em branco, tenta usar a do servidor.
-    final_key = data.get("apiKey") or ENV_API_KEY
-    
+    # 1. Define a chave (Manual ganha do Servidor)
+    final_key = data.get("apiKey")
+    if not final_key or final_key.strip() == "":
+        final_key = ENV_API_KEY
+
+    # LOG: Mostra no Railway o que estamos enviando
+    print(f"--- INICIANDO DEBUG ---", file=sys.stdout)
+    print(f"Chave usada (primeiros 5 digitos): {final_key[:5] if final_key else 'SEM CHAVE'}", file=sys.stdout)
+    print(f"Filtros recebidos: {data.get('sports')}", file=sys.stdout)
+
     try:
+        # Chama o SEU scanner original
         result = run_scan(
             api_key=final_key,
             sports=data.get("sports"),
@@ -28,9 +35,18 @@ def scan():
             stake_amount=float(data.get("stake") or 100),
             commission_rate=float(data.get("commission") or 1) / 100.0
         )
+        
+        # LOG: Mostra EXATAMENTE o que o scanner devolveu
+        # Se aqui aparecer "opportunities": [], o scanner original não achou nada.
+        # Se aqui aparecer dados, o erro é no HTML.
+        print(f"--- RESULTADO DO SCANNER ---", file=sys.stdout)
+        print(json.dumps(result, indent=2), file=sys.stdout)
+        print(f"--- FIM DO DEBUG ---", file=sys.stdout)
+        
         return jsonify(result)
+
     except Exception as e:
-        print(f"Erro no Scanner: {e}")
+        print(f"ERRO CRÍTICO NO SCANNER: {e}", file=sys.stdout)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
