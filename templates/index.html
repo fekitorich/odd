@@ -2,12 +2,13 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Scanner Latam PRO V4</title>
+    <title>Scanner Latam PRO Final</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #10b981; --gold: #fbbf24; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; }
         
+        /* Painel de Controle */
         .control-panel { background: var(--panel); padding: 20px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 25px; }
         .panel-grid { display: grid; grid-template-columns: 1fr 2fr 150px; gap: 20px; }
         
@@ -19,12 +20,22 @@
 
         .checkbox-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; padding-right: 5px; }
         .cb-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #cbd5e1; cursor: pointer; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; }
+        .cb-item:hover { background: rgba(255,255,255,0.1); }
         .cb-item input { accent-color: var(--primary); }
 
+        /* ABAS (TABS) */
+        .tabs { display: flex; gap: 10px; margin-bottom: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .tab-btn { background: transparent; border: none; color: #94a3b8; padding: 10px 20px; font-weight: bold; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: white; border-bottom-color: var(--primary); }
+        
+        .tab-content { display: none; margin-top: 20px; }
+        .tab-content.active { display: block; }
+
+        /* Tabela */
         .results-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
         .results-table th { text-align: left; padding: 10px; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
         
-        .row-card td { background: var(--panel); padding: 15px; border-top: 1px solid #334155; border-bottom: 1px solid #334155; vertical-align: top; }
+        .row-card td { background: var(--panel); padding: 15px; border-top: 1px solid #334155; border-bottom: 1px solid #334155; vertical-align: middle; }
         .row-card td:first-child { border-left: 1px solid #334155; border-top-left-radius: 8px; border-bottom-left-radius: 8px; width: 25%; }
         .row-card td:last-child { border-right: 1px solid #334155; border-top-right-radius: 8px; border-bottom-right-radius: 8px; width: 10%; text-align: center; }
 
@@ -36,18 +47,15 @@
         .bet-bookie { color: #fbbf24; font-size: 11px; margin-right: 10px; background: rgba(251, 191, 36, 0.1); padding: 2px 6px; border-radius: 4px; }
         .bet-odd { color: white; font-weight: bold; font-size: 14px; }
         
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; display: inline-block; margin-bottom: 5px; }
-        .badge-arb { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid var(--gold); }
-        .badge-ev { background: rgba(16, 185, 129, 0.2); color: var(--green); border: 1px solid var(--green); }
-        
-        .debug-text { font-size: 10px; color: #f87171; font-family: monospace; display: block; margin-top: 5px; word-break: break-all; }
+        .roi-val-arb { font-size:16px; font-weight:bold; color: var(--gold); }
+        .roi-val-ev { font-size:16px; font-weight:bold; color: var(--green); }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="color:white; margin:0;">SCANNER LATAM V4</h2>
+        <h2 style="color:white; margin:0;">SCANNER LATAM V5</h2>
     </div>
 
     <form id="form" class="control-panel">
@@ -56,7 +64,7 @@
                 <label>API KEY</label>
                 <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958">
                 <div style="margin-top:15px;">
-                    <label>Regiões (Deixe EU marcado para +EV)</label>
+                    <label>Regiões</label>
                     <div style="display:flex; gap:10px; color:#cbd5e1; font-size:12px;">
                         <label><input type="checkbox" name="regions" value="eu" checked> EU</label>
                         <label><input type="checkbox" name="regions" value="uk" checked> UK</label>
@@ -66,7 +74,7 @@
             </div>
 
             <div>
-                <label>LIGAS (Série A/B + Latam Completo)</label>
+                <label>LIGAS</label>
                 <div class="checkbox-group">
                     <label class="cb-item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
                     <label class="cb-item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
@@ -89,27 +97,55 @@
 
     <div id="loading" style="display:none; text-align:center; color:#64748b; padding:40px;">Buscando oportunidades...</div>
 
-    <table class="results-table">
-        <thead>
-            <tr>
-                <th>Evento</th>
-                <th>Estratégia & Aposta</th>
-                <th>Lucro / Edge</th>
-            </tr>
-        </thead>
-        <tbody id="tb-body"></tbody>
-    </table>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('tab-arb')">ARBITRAGEM (LUCRO CERTO)</button>
+        <button class="tab-btn" onclick="openTab('tab-ev')">+EV (VALOR ESPERADO)</button>
+    </div>
+
+    <div id="tab-arb" class="tab-content active">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Evento</th>
+                    <th>Apostas Necessárias</th>
+                    <th>Lucro (%)</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-arb"></tbody>
+        </table>
+    </div>
+
+    <div id="tab-ev" class="tab-content">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Evento</th>
+                    <th>Aposta de Valor</th>
+                    <th>Edge (%)</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-ev"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
+    function openTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(tabName).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
     document.getElementById('form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn');
-        const tbody = document.getElementById('tb-body');
         const loading = document.getElementById('loading');
         
         btn.disabled = true;
-        tbody.innerHTML = '';
+        document.getElementById('tbody-arb').innerHTML = '';
+        document.getElementById('tbody-ev').innerHTML = '';
         loading.style.display = 'block';
 
         try {
@@ -132,11 +168,8 @@
                 throw new Error("COTA DA API EXCEDIDA.");
             }
 
-            let allOps = [];
-            if(data.arbitrage?.opportunities) data.arbitrage.opportunities.forEach(op => { op.type = 'arb'; allOps.push(op); });
-            if(data.plus_ev?.opportunities) data.plus_ev.opportunities.forEach(op => { op.type = 'ev'; allOps.push(op); });
-
-            renderTable(allOps);
+            renderArbitrage(data.arbitrage?.opportunities || []);
+            renderEV(data.plus_ev?.opportunities || []);
 
         } catch (err) {
             alert('Erro: ' + err.message);
@@ -146,23 +179,18 @@
         }
     });
 
-    function renderTable(list) {
-        const tbody = document.getElementById('tb-body');
-        
-        if (!list || list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#64748b;">Nenhuma oportunidade encontrada.</td></tr>';
+    function renderArbitrage(list) {
+        const tbody = document.getElementById('tbody-arb');
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#64748b;">Nenhuma Arbitragem encontrada.</td></tr>';
             return;
         }
 
         list.forEach(item => {
-            const roi = item.roi_percent || item.edge_percent || item.gross_roi_percent || 0;
-            const isArb = item.type === 'arb';
+            const roi = item.roi_percent || 0;
             let betsHTML = '';
             
-            // --- LÓGICA DE DETECÇÃO DE DADOS ---
-            
-            // 1. ARBITRAGEM (Já sabemos que funciona)
-            if (isArb && item.stakes && item.stakes.breakdown) {
+            if (item.stakes && item.stakes.breakdown) {
                 betsHTML = item.stakes.breakdown.map(bet => {
                     const line = (bet.point && bet.point > 0) ? `+${bet.point}` : (bet.point || '');
                     return `
@@ -173,60 +201,56 @@
                         <span class="bet-odd">@${bet.price}</span>
                     </div>`;
                 }).join('');
-            } 
-            // 2. +EV (AQUI ESTÁ A MUDANÇA)
-            else {
-                // Tenta extrair dados de lista ou objeto único
-                const bets = (item.outcomes && item.outcomes.length > 0) ? item.outcomes : [item];
-                
-                betsHTML = bets.map(bet => {
-                    // FORÇA BRUTA: Testa todas as variáveis possíveis
-                    const name = bet.selection || bet.name || bet.outcome || bet.team || bet.bet || '???';
-                    const book = bet.bookmaker || bet.bookie || bet.book || bet.site || '???';
-                    
-                    // Testa Price, Odds, Value, Decimal, Rate
-                    let price = bet.price || bet.odds || bet.value || bet.decimal || bet.rate;
-                    if (!price) price = 'N/A';
-
-                    // Testa Point, Handicap, Spread
-                    const p = bet.point || item.point;
-                    const line = (p && p > 0) ? `+${p}` : (p || '');
-
-                    // DEBUG: Se não achar o preço, mostra o JSON cru para descobrirmos o erro
-                    let debugInfo = '';
-                    if (price === 'N/A' || name === '???') {
-                         debugInfo = `<span class="debug-text">DEBUG: ${JSON.stringify(bet)}</span>`;
-                    }
-
-                    return `
-                    <div class="bet-line type-ev">
-                        <span style="font-size:10px; color:#cbd5e1; margin-right:8px;">VALOR</span>
-                        <span class="bet-pick">${name} <span style="color:#60a5fa">${line}</span></span>
-                        <span class="bet-bookie">${book}</span>
-                        <span class="bet-odd">@${price}</span>
-                        ${debugInfo}
-                    </div>`;
-                }).join('');
             }
-
-            const badgeClass = isArb ? 'badge-arb' : 'badge-ev';
-            const badgeText = isArb ? 'LUCRO CERTO' : '+EV';
 
             tbody.innerHTML += `
                 <tr class="row-card">
                     <td>
-                        <div class="badge ${badgeClass}">${badgeText}</div>
                         <div style="font-weight:bold; color:white; font-size:14px;">${item.sport_display || item.sport}</div>
                         <div style="font-size:12px; color:#94a3b8; margin-top:4px;">${item.event}</div>
                     </td>
+                    <td><div style="display:flex; flex-direction:column; gap:5px;">${betsHTML}</div></td>
+                    <td style="text-align:center;"><div class="roi-val-arb">${parseFloat(roi).toFixed(2)}%</div></td>
+                </tr>
+            `;
+        });
+    }
+
+    function renderEV(list) {
+        const tbody = document.getElementById('tbody-ev');
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#64748b;">Nenhum +EV encontrado. (Marque a região EU)</td></tr>';
+            return;
+        }
+
+        list.forEach(item => {
+            // AQUI ESTÁ A CORREÇÃO BASEADA NO SEU PRINT DE DEBUG
+            const roi = item.edge_percent || item.ev_per_100 || 0;
+            
+            // Variáveis descobertas no Debug: 'outcome', 'soft_book', 'soft_odds'
+            const name = item.outcome || item.selection || 'Aposta';
+            const book = item.soft_book || item.bookmaker || 'Casa'; // CORRIGIDO
+            const price = item.soft_odds || item.odds || 'N/A';      // CORRIGIDO
+            
+            const p = item.point;
+            const line = (p && p > 0) ? `+${p}` : (p || '');
+
+            const betHTML = `
+            <div class="bet-line type-ev">
+                <span style="font-size:10px; color:#cbd5e1; margin-right:8px;">VALOR</span>
+                <span class="bet-pick">${name} <span style="color:#60a5fa">${line}</span></span>
+                <span class="bet-bookie">${book}</span>
+                <span class="bet-odd">@${price}</span>
+            </div>`;
+
+            tbody.innerHTML += `
+                <tr class="row-card">
                     <td>
-                        <div style="display:flex; flex-direction:column; gap:5px;">
-                            ${betsHTML}
-                        </div>
+                        <div style="font-weight:bold; color:white; font-size:14px;">${item.sport_display || item.sport}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px;">${item.event}</div>
                     </td>
-                    <td style="text-align:center;">
-                        <div style="font-size:16px; font-weight:bold; color:${isArb ? '#fbbf24' : '#10b981'}">${parseFloat(roi).toFixed(2)}%</div>
-                    </td>
+                    <td>${betHTML}</td>
+                    <td style="text-align:center;"><div class="roi-val-ev">${parseFloat(roi).toFixed(2)}%</div></td>
                 </tr>
             `;
         });
