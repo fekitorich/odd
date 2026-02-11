@@ -4,165 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edge Scanner</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* CSS ORIGINAL RESTAURADO */
+        :root {
+            --bg-dark: #0f172a; --panel-bg: #1e293b; --text-main: #e2e8f0;
+            --text-muted: #94a3b8; --primary: #3b82f6; --success-bg: #064e3b;
+            --success-text: #34d399; --border: #334155;
+        }
+        body { background-color: var(--bg-dark); color: var(--text-main); font-family: sans-serif; margin: 0; padding: 40px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 28px; color: white; }
+        .subtitle { color: var(--text-muted); font-size: 14px; }
+        .main-panel {
+            background-color: var(--panel-bg); border-radius: 16px; padding: 40px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .form-section { display: flex; flex-direction: column; gap: 20px; }
+        label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        input { background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        .api-success { background: rgba(6, 78, 59, 0.5); border: 1px solid var(--success-bg); color: var(--success-text); padding: 12px; border-radius: 6px; font-size: 14px; }
+        .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .checkbox-item { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+        .scan-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 150px; margin-top: 20px; }
+        
+        /* SISTEMA DE ABAS (+EV, Middles, Arbitrage) */
+        .tabs { display: flex; gap: 10px; margin-top: 40px; border-bottom: 1px solid var(--border); }
+        .tab { padding: 10px 20px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+        .tab.active { color: white; border-bottom: 2px solid var(--primary); font-weight: bold; }
+        .tab-content { display: none; background: var(--panel-bg); padding: 20px; border-radius: 0 0 16px 16px; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase; padding: 10px; border-bottom: 1px solid var(--border); }
+        td { padding: 15px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .roi-badge { background: var(--success-bg); color: var(--success-text); padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div>
-                <h1>Edge Scanner</h1>
-                <div class="subtitle">Arbitrage • Middles • +EV</div>
-            </div>
-            <div class="toggle-group">
-                <div class="toggle-btn active" id="odds-decimal">Decimal</div>
-                <div class="toggle-btn" id="odds-american" style="color: #64748b;">American</div>
-            </div>
+            <div><h1>Edge Scanner</h1><div class="subtitle">Arbitrage • Middles • +EV</div></div>
         </div>
 
         <form id="scanner-form">
             <div class="main-panel">
                 <div class="form-section">
-                    <div>
-                        <label>API KEY</label>
-                        <div class="api-success">
-                            <span>✓</span> Using API key from .env
-                        </div>
-                    </div>
-                    <div>
-                        <label>TOTAL STAKE ($)</label>
-                        <input type="number" name="stake" value="{{ default_bankroll }}">
-                        <div class="subtitle" style="font-size: 12px; margin-top: 5px;">Used for arbitrage + middles stake splits.</div>
-                    </div>
+                    <label>API KEY</label>
+                    <div class="api-success">✓ Using API key from .env</div>
+                    <label>TOTAL STAKE ($)</label>
+                    <input type="number" name="stake" value="100">
                 </div>
-
                 <div class="form-section">
                     <label>SPORTS</label>
                     <div class="checkbox-grid">
-                        {% for sport in default_sports %}
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="sports" value="{{ sport.key }}" checked> {{ sport.title }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <label class="checkbox-item" style="color: white;">
-                            <input type="checkbox" name="allSports"> Scan all active sports (uses more API credits)
-                        </label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
+                        <label class="checkbox-item"><input type="checkbox" name="sports" value="baseball_mlb" checked> MLB</label>
                     </div>
                 </div>
-
                 <div class="form-section">
                     <label>REGIONS</label>
                     <div class="checkbox-grid">
-                        {% for region in region_options %}
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="regions" value="{{ region.key }}" checked> {{ region.title }}
-                        </label>
-                        {% endfor %}
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="us" checked> US</label>
+                        <label class="checkbox-item"><input type="checkbox" name="regions" value="eu" checked> Europe</label>
                     </div>
-                    <div style="background: #253045; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-top: 15px;">
-                        <label>EXCHANGE COMMISSION (%)</label>
-                        <input type="number" name="commission" value="{{ default_commission_percent }}">
-                    </div>
+                    <label style="margin-top:15px">COMMISSION (%)</label>
+                    <input type="number" name="commission" value="1">
                 </div>
             </div>
-
-            <button type="submit" class="scan-btn" id="scan-btn">Scan Now</button>
+            <button type="submit" class="scan-btn" id="btn-text">Scan Now</button>
         </form>
 
-        <div class="results-wrapper" id="results-wrapper" style="display: none; margin-top: 30px;">
+        <div id="results-wrapper" style="display:none">
             <div class="tabs">
-                <div class="tab active" data-tab="arbitrage">Arbitrage</div>
-                <div class="tab" data-tab="middles">Middles</div>
-                <div class="tab" data-tab="plus-ev">+EV</div>
+                <div class="tab active" onclick="openTab('arbitrage')">Arbitrage</div>
+                <div class="tab" onclick="openTab('middles')">Middles</div>
+                <div class="tab" onclick="openTab('plus-ev')">+EV</div>
             </div>
 
-            <div class="tab-content active" id="arbitrage">
-                <table id="table-arbitrage">
-                    <thead><tr><th>Sport</th><th>Event</th><th>Market</th><th>ROI</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+            <div id="arbitrage" class="tab-content active">
+                <table><thead><tr><th>Sport</th><th>Event</th><th>ROI</th></tr></thead><tbody id="arb-body"></tbody></table>
             </div>
-
-            <div class="tab-content" id="middles">
-                <table id="table-middles">
-                    <thead><tr><th>Sport</th><th>Event</th><th>Middle Range</th><th>ROI</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+            <div id="middles" class="tab-content">
+                <table><thead><tr><th>Sport</th><th>Event</th><th>ROI</th></tr></thead><tbody id="mid-body"></tbody></table>
             </div>
-
-            <div class="tab-content" id="plus-ev">
-                <table id="table-plus-ev">
-                    <thead><tr><th>Sport</th><th>Event</th><th>Edge</th><th>ROI</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+            <div id="plus-ev" class="tab-content">
+                <table><thead><tr><th>Sport</th><th>Event</th><th>ROI</th></tr></thead><tbody id="ev-body"></tbody></table>
             </div>
         </div>
     </div>
 
     <script>
-        // Lógica de Troca de Abas
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.tab).classList.add('active');
-            });
-        });
+        function openTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
 
-        // Lógica do Scan (Fix para não abrir página branca)
         document.getElementById('scanner-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('scan-btn');
+            const btn = document.getElementById('btn-text');
             btn.innerText = 'Scanning...';
-            btn.disabled = true;
-
+            
             const formData = new FormData(e.target);
             const payload = {
-                sports: formData.getAll('sports'),
-                regions: formData.getAll('regions'),
-                stake: formData.get('stake'),
-                commission: formData.get('commission'),
-                allSports: formData.get('allSports') === 'on'
+                sports: formData.getAll('sports'), regions: formData.getAll('regions'),
+                stake: formData.get('stake'), commission: formData.get('commission')
             };
 
             try {
                 const response = await fetch('/scan', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
                 
                 document.getElementById('results-wrapper').style.display = 'block';
-                
-                // Preencher Arbitragem
-                renderTable('table-arbitrage', data.arbitrage?.opportunities || []);
-                // Preencher Middles
-                renderTable('table-middles', data.middles?.opportunities || []);
-                // Preencher +EV
-                renderTable('table-plus-ev', data.plus_ev?.opportunities || []);
-
-            } catch (err) {
-                alert("Erro ao processar dados. Verifique os logs.");
-            } finally {
-                btn.innerText = 'Scan Now';
-                btn.disabled = false;
-            }
+                fillTable('arb-body', data.arbitrage?.opportunities || []);
+                fillTable('mid-body', data.middles?.opportunities || []);
+                fillTable('ev-body', data.plus_ev?.opportunities || []);
+            } catch (err) { alert('Erro no scan'); }
+            finally { btn.innerText = 'Scan Now'; }
         });
 
-        function renderTable(id, items) {
-            const tbody = document.querySelector(`#${id} tbody`);
-            tbody.innerHTML = items.length ? '' : '<tr><td colspan="4">No opportunities found.</td></tr>';
-            items.forEach(item => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${item.sport}</td>
-                        <td>${item.event}</td>
-                        <td>${item.market || item.range || '-'}</td>
-                        <td><span class="roi-badge">${item.roi_percent}%</span></td>
-                    </tr>`;
+        function fillTable(tbodyId, items) {
+            const body = document.getElementById(tbodyId);
+            body.innerHTML = items.length ? '' : '<tr><td colspan="3">Nenhum resultado</td></tr>';
+            items.forEach(opp => {
+                body.innerHTML += `<tr><td>${opp.sport}</td><td>${opp.event}</td><td><span class="roi-badge">${opp.roi_percent}%</span></td></tr>`;
             });
         }
     </script>
