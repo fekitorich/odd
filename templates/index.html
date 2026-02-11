@@ -6,7 +6,7 @@
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #e2e8f0; --primary: #3b82f6; --green: #064e3b; --green-text: #34d399; --red: #7f1d1d; --red-text: #f87171; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; margin: 0; }
-        .container { max-width: 1400px; margin: 0 auto; } /* Aumentei a largura */
+        .container { max-width: 1400px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
         h1 { margin: 0; font-size: 28px; color: white; font-weight: 700; }
         
@@ -15,7 +15,6 @@
         label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         input[type="text"], input[type="number"] { background: var(--bg); border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 13px; }
         
-        /* Grid de Esportes Melhorado */
         .sports-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .sport-category { margin-bottom: 15px; }
         .cat-title { color: var(--primary); font-size: 10px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #334155; padding-bottom: 5px; margin-bottom: 8px; }
@@ -26,7 +25,6 @@
         
         .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; font-size: 16px; transition: 0.2s; }
         .btn:hover { background: #2563eb; }
-        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
         .alert { padding: 15px; border-radius: 8px; margin-top: 20px; display: none; font-size: 14px; }
         .alert-error { background: rgba(127, 29, 29, 0.2); border: 1px solid var(--red); color: var(--red-text); }
@@ -40,12 +38,15 @@
         
         table { width: 100%; border-collapse: collapse; }
         th { background: rgba(15, 23, 42, 0.5); text-align: left; padding: 12px 16px; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-        td { padding: 12px 16px; border-bottom: 1px solid #334155; font-size: 13px; vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
+        td { padding: 16px; border-bottom: 1px solid #334155; font-size: 13px; vertical-align: top; }
         
         .roi-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; }
         .roi-pos { background: rgba(6, 78, 59, 0.4); color: var(--green-text); border: 1px solid var(--green); }
         .roi-neg { background: rgba(127, 29, 29, 0.4); color: var(--red-text); border: 1px solid var(--red); }
+        
+        .bet-detail { margin-bottom: 8px; line-height: 1.4; }
+        .bookie-name { color: #94a3b8; font-size: 11px; font-weight: normal; }
+        .odd-val { color: white; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -58,67 +59,33 @@
             <div class="main-panel">
                 <div>
                     <label>API KEY</label>
-                    <input type="text" name="apiKey" value="bafc062b2308e860fc661b8b206b013c" style="color:#34d399; font-weight:bold;">
+                    <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958" style="color:#34d399; font-weight:bold;">
                     
                     <div style="margin-top:20px"><label>STAKE ($)</label><input type="number" name="stake" value="100"></div>
-                    
-                    <div style="margin-top:20px"><label>COMMISSION (%)</label><input type="number" name="commission" value="0"></div>
-
-                    <div style="margin-top:30px">
-                        <label>REGIONS</label>
+                    <div style="margin-top:20px"><label>REGIONS</label>
                         <div style="display:grid; gap:8px;">
-                            <label class="item"><input type="checkbox" name="regions" value="us" checked> US (Odds Americanas)</label>
-                            <label class="item"><input type="checkbox" name="regions" value="uk" checked> UK (Odds Decimais)</label>
-                            <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU (Europa)</label>
-                            <label class="item"><input type="checkbox" name="regions" value="au"> AU (Austrália)</label>
+                            <label class="item"><input type="checkbox" name="regions" value="us"> US (Americanas)</label>
+                            <label class="item"><input type="checkbox" name="regions" value="uk" checked> UK (Decimais)</label>
+                            <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU (Europa/Pinnacle)</label>
                         </div>
                     </div>
-                    
                     <button type="submit" class="btn" id="btn">Scan Now</button>
                 </div>
 
                 <div style="grid-column: span 2;">
                     <label>SPORTS SELECTION</label>
                     <div class="sports-container">
-                        
                         <div class="sport-category">
-                            <div class="cat-title">US & Popular</div>
+                            <div class="cat-title">Principais</div>
                             <label class="item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
-                            <label class="item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
-                            <label class="item"><input type="checkbox" name="sports" value="baseball_mlb"> MLB</label>
-                            <label class="item"><input type="checkbox" name="sports" value="icehockey_nhl"> NHL</label>
+                            <label class="item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
+                            <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
+                        </div>
+                        <div class="sport-category">
+                            <div class="cat-title">Tênis & Outros</div>
+                            <label class="item"><input type="checkbox" name="sports" value="tennis_atp_aus_open_singles"> ATP Aus Open</label>
                             <label class="item"><input type="checkbox" name="sports" value="mma_mixed_martial_arts"> MMA / UFC</label>
                         </div>
-
-                        <div class="sport-category">
-                            <div class="cat-title">Futebol Américas</div>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_serie_b"> Brasil Série B</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_conmebol_libertadores" checked> Libertadores</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_conmebol_sudamericana"> Sul-Americana</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_argentina_primera"> Argentina</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_mexico_ligamx"> México Liga MX</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_mls"> MLS (EUA)</label>
-                        </div>
-
-                        <div class="sport-category">
-                            <div class="cat-title">Futebol Europa</div>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_uefa_champs_league" checked> Champions League</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_uefa_europa_league"> Europa League</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_spain_la_liga"> La Liga (Esp)</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_italy_serie_a"> Serie A (Ita)</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_germany_bundesliga"> Bundesliga (Ale)</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_france_ligue_one"> Ligue 1 (Fra)</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_portugal_primeira_liga"> Portugal Primeira</label>
-                            <label class="item"><input type="checkbox" name="sports" value="soccer_netherlands_eredivisie"> Holanda Eredivisie</label>
-                        </div>
-
-                         <div class="sport-category">
-                            <div class="cat-title">Tênis</div>
-                            <label class="item"><input type="checkbox" name="sports" value="tennis_atp_aus_open_singles"> ATP Aus Open</label>
-                            <label class="item"><input type="checkbox" name="sports" value="tennis_wta_aus_open_singles"> WTA Aus Open</label>
-                            </div>
                     </div>
                 </div>
             </div>
@@ -134,13 +101,13 @@
             </div>
 
             <div id="ev" class="content active">
-                <table><thead><tr><th>Evento</th><th>Aposta / Mercado</th><th>Edge / ROI</th></tr></thead><tbody id="tb-ev"></tbody></table>
+                <table><thead><tr><th>Evento</th><th>Onde Apostar</th><th>Edge / Valor</th></tr></thead><tbody id="tb-ev"></tbody></table>
             </div>
             <div id="arb" class="content">
-                <table><thead><tr><th>Evento</th><th>Aposta / Mercado</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
+                <table><thead><tr><th>Evento</th><th>Combinação Necessária</th><th>ROI</th></tr></thead><tbody id="tb-arb"></tbody></table>
             </div>
             <div id="mid" class="content">
-                <table><thead><tr><th>Evento</th><th>Range</th><th>ROI</th></tr></thead><tbody id="tb-mid"></tbody></table>
+                <table><thead><tr><th>Evento</th><th>Range de Aposta</th><th>ROI</th></tr></thead><tbody id="tb-mid"></tbody></table>
             </div>
         </div>
     </div>
@@ -159,18 +126,16 @@
             const errBox = document.getElementById('error-box');
             const results = document.getElementById('results-area');
 
-            btn.innerText = 'Scanning Market...';
+            btn.innerText = 'Consultando API...';
             btn.disabled = true;
             errBox.style.display = 'none';
-            results.style.display = 'none';
 
             const formData = new FormData(e.target);
             const payload = {
                 apiKey: formData.get('apiKey'),
                 sports: [...formData.getAll('sports')],
                 regions: [...formData.getAll('regions')],
-                stake: formData.get('stake'),
-                commission: formData.get('commission')
+                stake: formData.get('stake')
             };
 
             try {
@@ -179,20 +144,19 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-                
                 const data = await res.json();
 
-                if (!res.ok || data.error) {
-                    throw new Error(data.error || 'Erro na API');
+                if (data.sport_errors && data.sport_errors.some(e => e.error.includes("quota"))) {
+                    throw new Error("COTA DA API EXCEDIDA. Crie uma nova conta no site The Odds API.");
                 }
 
                 results.style.display = 'block';
-                renderTable('tb-ev', data.plus_ev?.opportunities);
-                renderTable('tb-arb', data.arbitrage?.opportunities);
-                renderTable('tb-mid', data.middles?.opportunities);
+                renderTable('tb-ev', data.plus_ev?.opportunities, true);
+                renderTable('tb-arb', data.arbitrage?.opportunities, false);
+                renderTable('tb-mid', data.middles?.opportunities, false);
 
             } catch (err) {
-                errBox.innerText = `STATUS: ${err.message}`;
+                errBox.innerText = err.message;
                 errBox.style.display = 'block';
             } finally {
                 btn.innerText = 'Scan Now';
@@ -200,31 +164,43 @@
             }
         });
 
-        function renderTable(tbodyId, list) {
+        function renderTable(tbodyId, list, isEV) {
             const tbody = document.getElementById(tbodyId);
             tbody.innerHTML = '';
 
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">Nenhuma oportunidade encontrada. Tente selecionar mais ligas.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#64748b;">Nenhuma oportunidade lucrativa no momento.</td></tr>';
                 return;
             }
 
             list.forEach(item => {
-                const roiVal = item.roi_percent || item.ev_percent || item.profit || item.roi || 0;
-                const betInfo = item.market || item.bet || item.selection || item.description || '-';
+                // Pega o ROI ou o Edge dependendo do tipo
+                const roiVal = item.edge_percent || item.roi_percent || item.profit || 0;
                 
-                const roiNum = parseFloat(roiVal);
-                const badgeClass = roiNum >= 0 ? 'roi-pos' : 'roi-neg';
+                // Formata os detalhes das apostas (OUTCOMES)
+                let betDisplay = `<div style="color:var(--primary); font-size:11px; margin-bottom:6px; font-weight:bold;">${item.market?.toUpperCase() || 'MERCADO'}</div>`;
+                
+                if (item.outcomes && Array.isArray(item.outcomes)) {
+                    betDisplay += item.outcomes.map(oc => `
+                        <div class="bet-detail">
+                            <span style="color:white;">${oc.name}</span> 
+                            <span class="bookie-name"> na ${oc.bookmaker || 'Casa'}</span> 
+                            <span class="odd-val">@ ${oc.price || oc.odds}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    betDisplay += `<div style="color:white;">${item.description || item.selection || 'Ver detalhes na casa'}</div>`;
+                }
                 
                 tbody.innerHTML += `
                     <tr>
                         <td>
                             <div style="font-weight:bold; color:white;">${item.sport || 'Esporte'}</div>
-                            <div style="color:#94a3b8; font-size:12px; margin-top:4px;">${item.event || item.match || 'Evento'}</div>
+                            <div style="color:#94a3b8; font-size:12px; margin-top:4px;">${item.event || 'Jogo'}</div>
                         </td>
-                        <td>${betInfo}</td>
+                        <td>${betDisplay}</td>
                         <td>
-                            <span class="roi-badge ${badgeClass}">${roiNum.toFixed(2)}%</span>
+                            <span class="roi-badge ${roiVal > 0 ? 'roi-pos' : 'roi-neg'}">${roiVal.toFixed(2)}%</span>
                         </td>
                     </tr>
                 `;
