@@ -14,7 +14,8 @@
         label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         input[type="text"], input[type="number"] { background: var(--bg); border: 1px solid #334155; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 14px; }
         
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        /* Grid ajustado para caber mais itens */
+        .grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
         .item { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; color: #cbd5e1; }
         input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
         
@@ -40,6 +41,8 @@
         .roi-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; display: inline-block; }
         .roi-pos { background: rgba(6, 78, 59, 0.4); color: var(--green-text); border: 1px solid var(--green); }
         .roi-neg { background: rgba(127, 29, 29, 0.4); color: var(--red-text); border: 1px solid var(--red); }
+        
+        .section-title { color: #3b82f6; font-size: 10px; font-weight: bold; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -51,7 +54,7 @@
         <form id="form">
             <div class="main-panel">
                 <div>
-                    <label>API KEY (Carregada)</label>
+                    <label>API KEY</label>
                     <input type="text" name="apiKey" value="ac611e223968599cffdcd6c1944f9958" style="color:#34d399; font-weight:bold;">
                     
                     <div style="margin-top:20px">
@@ -62,22 +65,32 @@
 
                 <div>
                     <label>SPORTS</label>
+                    
+                    <div class="section-title">Principais</div>
                     <div class="grid">
                         <label class="item"><input type="checkbox" name="sports" value="basketball_nba" checked> NBA</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_epl" checked> Premier League</label>
                         <label class="item"><input type="checkbox" name="sports" value="americanfootball_nfl" checked> NFL</label>
-                        <label class="item"><input type="checkbox" name="sports" value="baseball_mlb" checked> MLB</label>
-                        <label class="item"><input type="checkbox" name="sports" value="soccer_spain_la_liga" checked> La Liga</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_epl"> Premier League</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_spain_la_liga"> La Liga</label>
+                    </div>
+
+                    <div class="section-title">Américas (Novas)</div>
+                    <div class="grid">
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_brazil_campeonato" checked> Brasil Série A</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_conmebol_libertadores" checked> Libertadores</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_argentina_primera"> Argentina Primera</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_mexico_ligamx"> Mexico Liga MX</label>
+                        <label class="item"><input type="checkbox" name="sports" value="soccer_mls"> MLS (USA)</label>
                     </div>
                 </div>
 
                 <div>
                     <label>REGIONS</label>
                     <div class="grid">
-                        <label class="item"><input type="checkbox" name="regions" value="us" checked> US</label>
-                        <label class="item"><input type="checkbox" name="regions" value="uk" checked> UK</label>
-                        <label class="item"><input type="checkbox" name="regions" value="eu" checked> EU</label>
-                        <label class="item"><input type="checkbox" name="regions" value="au"> AU</label>
+                        <label class="item"><input type="checkbox" name="regions" value="us" checked> United States</label>
+                        <label class="item"><input type="checkbox" name="regions" value="uk"> United Kingdom</label>
+                        <label class="item"><input type="checkbox" name="regions" value="eu"> Europe</label>
+                        <label class="item"><input type="checkbox" name="regions" value="au"> Australia</label>
                     </div>
                     <div style="margin-top:20px">
                         <label>COMMISSION (%)</label>
@@ -130,8 +143,6 @@
             results.style.display = 'none';
 
             const formData = new FormData(e.target);
-            // Se o usuário apagar a chave do input, o Python usa a fixa.
-            // Mas o input já vai cheio.
             const payload = {
                 apiKey: formData.get('apiKey'),
                 sports: [...formData.getAll('sports')],
@@ -177,9 +188,13 @@
             }
 
             list.forEach(item => {
+                // Tenta achar ROI, Profit, EV ou qualquer campo de porcentagem
                 const roiVal = item.roi_percent || item.ev_percent || item.profit || item.roi || 0;
+                
+                // Tenta achar Market, Bet ou qualquer descrição
                 const betInfo = item.market || item.bet || item.selection || item.description || '-';
                 
+                // Formatação
                 const roiNum = parseFloat(roiVal);
                 const badgeClass = roiNum >= 0 ? 'roi-pos' : 'roi-neg';
                 
