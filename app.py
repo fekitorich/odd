@@ -5,7 +5,7 @@ from scanner import run_scan
 app = Flask(__name__)
 
 # Sua chave hardcoded para garantir que a API responda
-FIXED_KEY = "b1691c0d7659b8bc527393de24731962"
+FIXED_KEY = "bafc062b2308e860fc661b8b206b013c"
 
 @app.route("/")
 def index():
