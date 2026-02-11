@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from flask import Flask, jsonify, render_template, request
+from pathlib import Path
 from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request
 
-# Importa as configurações e scanner originais
-# Mantivemos TODA a lógica original de importação
+# Mantemos os imports originais de configuração e scanner
 from config import (
     DEFAULT_BANKROLL,
     DEFAULT_COMMISSION,
@@ -23,8 +23,8 @@ from scanner import run_scan
 load_dotenv()
 
 app = Flask(__name__)
-# Pega a chave do ambiente (Railway Variables)
 ENV_API_KEY = os.getenv("ODDS_API_KEY") or os.getenv("THEODDSAPI_API_KEY")
+
 
 @app.route("/")
 def index() -> str:
@@ -42,6 +42,7 @@ def index() -> str:
         kelly_options=KELLY_OPTIONS,
     )
 
+
 @app.route("/scan", methods=["POST"])
 def scan() -> tuple:
     # Lógica de recebimento de dados idêntica ao original
@@ -54,9 +55,11 @@ def scan() -> tuple:
     commission = payload.get("commission")
     sharp_book = (payload.get("sharpBook") or DEFAULT_SHARP_BOOK).strip().lower()
 
-    # Tratamento de tipos (mantido do original)
+    # Tratamento de erros de conversão (mantido do original)
     try:
-        min_edge_percent = float(payload.get("minEdgePercent")) if payload.get("minEdgePercent") is not None else MIN_EDGE_PERCENT
+        min_edge_percent = (
+            float(payload.get("minEdgePercent")) if payload.get("minEdgePercent") is not None else MIN_EDGE_PERCENT
+        )
     except (TypeError, ValueError):
         min_edge_percent = MIN_EDGE_PERCENT
     min_edge_percent = max(0.0, min_edge_percent)
@@ -68,7 +71,11 @@ def scan() -> tuple:
     bankroll_value = max(0.0, bankroll_value)
 
     try:
-        kelly_fraction = float(payload.get("kellyFraction")) if payload.get("kellyFraction") is not None else DEFAULT_KELLY_FRACTION
+        kelly_fraction = (
+            float(payload.get("kellyFraction"))
+            if payload.get("kellyFraction") is not None
+            else DEFAULT_KELLY_FRACTION
+        )
     except (TypeError, ValueError):
         kelly_fraction = DEFAULT_KELLY_FRACTION
     kelly_fraction = max(0.0, min(kelly_fraction, 1.0))
@@ -87,9 +94,11 @@ def scan() -> tuple:
         commission_percent = float(commission) if commission is not None else None
     except (TypeError, ValueError):
         commission_percent = None
-    commission_rate = (commission_percent / 100.0 if commission_percent is not None else DEFAULT_COMMISSION)
+    commission_rate = (
+        commission_percent / 100.0 if commission_percent is not None else DEFAULT_COMMISSION
+    )
 
-    # Executa a função run_scan do arquivo scanner.py original
+    # Executa o Scanner Original
     result = run_scan(
         api_key,
         sports,
@@ -105,11 +114,15 @@ def scan() -> tuple:
     status = 200 if result.get("success") else result.get("error_code", 500)
     return jsonify(result), status
 
-# --- PONTO CRÍTICO CORRIGIDO ---
-# O original tinha funções de 'open_browser' e 'choose_port' aqui.
-# Removemos tudo isso para deixar apenas o servidor rodar.
+
+def ensure_data_dir() -> None:
+    Path("data").mkdir(exist_ok=True)
+
+
 if __name__ == "__main__":
-    # O Gunicorn vai ignorar isso e usar o comando do Procfile
-    # Mas se você rodar localmente, isso funciona:
+    ensure_data_dir()
+    # MUDANÇA CRÍTICA: Removemos webbrowser/socket/threading
+    # Configuramos para aceitar a porta do Railway (PORT)
+    # Configuramos host='0.0.0.0' para aceitar conexões externas
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
