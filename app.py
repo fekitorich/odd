@@ -5,7 +5,11 @@ from scanner import run_scan
 
 app = Flask(__name__)
 
-# Sua API Key gravada
+# Configuração de Porta para o Railway
+# Lemos a porta logo no início do arquivo
+PORT = int(os.environ.get("PORT", 5000))
+
+# Sua chave hardcoded
 FIXED_KEY = "ac611e223968599cffdcd6c1944f9958"
 
 @app.route("/")
@@ -18,24 +22,19 @@ def scan():
     final_key = (data.get("apiKey") or "").strip() or FIXED_KEY
     
     try:
+        # Chama o seu scanner original
         result = run_scan(
             api_key=final_key,
             sports=data.get("sports") or [],
-            regions=data.get("regions") or ["us"],
+            regions=data.get("regions") or ["us", "uk", "eu"],
             stake_amount=float(data.get("stake") or 100),
             commission_rate=float(data.get("commission") or 0) / 100.0
         )
         return jsonify(result)
     except Exception as e:
+        print(f"ERRO NO SCANNER: {e}")
         return jsonify({"error": str(e), "success": False}), 500
 
-# --- A SOLUÇÃO ESTÁ AQUI ---
-# Movemos a definição da porta para fora do __main__
-# Isso força o Gunicorn a ver a porta certa do Railway
-if os.environ.get("PORT"):
-    port = int(os.environ.get("PORT"))
-else:
-    port = 5000
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=port)
+    # Rodando com host 0.0.0.0 para ser visível externamente
+    app.run(host="0.0.0.0", port=PORT)
