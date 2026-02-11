@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import argparse
 import os
-# import socket     <-- Removido para não dar erro
-# import threading  <-- Removido para não dar erro
-# import webbrowser <-- Removido pois servidor não tem navegador
 from pathlib import Path
-from typing import Optional
-
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
-# Importa as configurações ORIGINAIS
+# Importa configurações e scanner originais
 from config import (
     DEFAULT_BANKROLL,
     DEFAULT_COMMISSION,
@@ -31,7 +25,6 @@ load_dotenv()
 app = Flask(__name__)
 ENV_API_KEY = os.getenv("ODDS_API_KEY") or os.getenv("THEODDSAPI_API_KEY")
 
-
 @app.route("/")
 def index() -> str:
     return render_template(
@@ -48,10 +41,8 @@ def index() -> str:
         kelly_options=KELLY_OPTIONS,
     )
 
-
 @app.route("/scan", methods=["POST"])
 def scan() -> tuple:
-    # LÓGICA ORIGINAL MANTIDA 100% IGUAL
     payload = request.get_json(force=True, silent=True) or {}
     api_key = ENV_API_KEY or (payload.get("apiKey") or "").strip()
     sports = payload.get("sports") or []
@@ -60,42 +51,43 @@ def scan() -> tuple:
     regions = payload.get("regions")
     commission = payload.get("commission")
     sharp_book = (payload.get("sharpBook") or DEFAULT_SHARP_BOOK).strip().lower()
+
+    # Tratamento de erros de conversão (mantendo lógica original)
     try:
-        min_edge_percent = (
-            float(payload.get("minEdgePercent")) if payload.get("minEdgePercent") is not None else MIN_EDGE_PERCENT
-        )
+        min_edge_percent = float(payload.get("minEdgePercent")) if payload.get("minEdgePercent") is not None else MIN_EDGE_PERCENT
     except (TypeError, ValueError):
         min_edge_percent = MIN_EDGE_PERCENT
     min_edge_percent = max(0.0, min_edge_percent)
+
     try:
         bankroll_value = float(payload.get("bankroll")) if payload.get("bankroll") is not None else DEFAULT_BANKROLL
     except (TypeError, ValueError):
         bankroll_value = DEFAULT_BANKROLL
     bankroll_value = max(0.0, bankroll_value)
+
     try:
-        kelly_fraction = (
-            float(payload.get("kellyFraction"))
-            if payload.get("kellyFraction") is not None
-            else DEFAULT_KELLY_FRACTION
-        )
+        kelly_fraction = float(payload.get("kellyFraction")) if payload.get("kellyFraction") is not None else DEFAULT_KELLY_FRACTION
     except (TypeError, ValueError):
         kelly_fraction = DEFAULT_KELLY_FRACTION
     kelly_fraction = max(0.0, min(kelly_fraction, 1.0))
+
     try:
         stake_value = float(stake) if stake is not None else 100.0
     except (TypeError, ValueError):
         stake_value = 100.0
+
     if isinstance(regions, list):
         regions_value = [str(region) for region in regions if isinstance(region, str)]
     else:
         regions_value = None
+
     try:
         commission_percent = float(commission) if commission is not None else None
     except (TypeError, ValueError):
         commission_percent = None
-    commission_rate = (
-        commission_percent / 100.0 if commission_percent is not None else DEFAULT_COMMISSION
-    )
+    commission_rate = (commission_percent / 100.0 if commission_percent is not None else DEFAULT_COMMISSION)
+
+    # Chama o scanner original
     result = run_scan(
         api_key,
         sports,
@@ -111,16 +103,12 @@ def scan() -> tuple:
     status = 200 if result.get("success") else result.get("error_code", 500)
     return jsonify(result), status
 
-
 def ensure_data_dir() -> None:
     Path("data").mkdir(exist_ok=True)
 
-
 if __name__ == "__main__":
     ensure_data_dir()
-    # MODIFICAÇÃO CRÍTICA PARA RAILWAY:
-    # 1. Pega a porta do ambiente
-    # 2. Define host='0.0.0.0' (obrigatório para acesso externo)
-    # 3. Remove web browser automático
+    # Esta parte só roda se você testar no PC.
+    # No Railway, quem manda é o Procfile + Gunicorn.
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port)
