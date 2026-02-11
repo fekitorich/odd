@@ -3,7 +3,7 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 from dotenv import load_dotenv
 
-# Importa a sua lógica e configurações originais
+# Importa as configurações e a lógica do seu scanner original
 from config import (
     DEFAULT_BANKROLL, DEFAULT_COMMISSION, DEFAULT_KELLY_FRACTION,
     DEFAULT_REGION_KEYS, DEFAULT_SHARP_BOOK, DEFAULT_SPORT_OPTIONS,
@@ -14,12 +14,12 @@ from scanner import run_scan
 load_dotenv()
 
 app = Flask(__name__)
-# Railway usa variáveis de ambiente para a API KEY
+# Chave da API vinda das variáveis de ambiente do Railway
 ENV_API_KEY = os.getenv("ODDS_API_KEY") or os.getenv("THEODDSAPI_API_KEY")
 
 @app.route("/")
 def index():
-    # Renderiza o index.html original (deve estar na pasta templates)
+    # Renderiza o index.html que está na sua pasta /templates
     return render_template(
         "index.html",
         default_sports=DEFAULT_SPORT_OPTIONS,
@@ -36,11 +36,11 @@ def index():
 
 @app.route("/scan", methods=["POST"])
 def scan():
-    # Recebe os cliques do botão 'Scan Now' do seu site
+    # Captura os dados enviados pelo botão do site
     payload = request.get_json(force=True, silent=True) or {}
     api_key = ENV_API_KEY or (payload.get("apiKey") or "").strip()
     
-    # Chama o seu scanner original com os dados do formulário
+    # Chama o scanner original com os parâmetros do seu site
     result = run_scan(
         api_key=api_key,
         sports=payload.get("sports"),
@@ -54,11 +54,11 @@ def scan():
         kelly_fraction=float(payload.get("kellyFraction") or DEFAULT_KELLY_FRACTION)
     )
     
-    # Retorna DADOS (JSON) para preencher as tabelas e gráficos originais
+    # RETORNA JSON (DADOS): Essencial para o index.html preencher a tabela
     return jsonify(result)
 
 if __name__ == "__main__":
+    # Garante a pasta de dados e usa a porta do Railway
     Path("data").mkdir(exist_ok=True)
     port = int(os.environ.get("PORT", 5000))
-    # host 0.0.0.0 é obrigatório para o Railway aceitar conexões
     app.run(host="0.0.0.0", port=port)
